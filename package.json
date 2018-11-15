@@ -1,0 +1,25 @@
+{
+    "name": "musupport",
+    "displayName": "MuSupport",
+    "description": "Language support for files in Project Mu",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.29.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "dsc",
+            "aliases": ["DSC", "dsc"],
+            "extensions": [".dsc"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "dsc",
+            "scopeName": "scope.dsc",
+            "path": "./syntaxes/dsc.tmLanguage.json"
+        }]
+    }
+}
