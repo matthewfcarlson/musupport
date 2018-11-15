@@ -14,11 +14,11 @@
             "id": "dsc",
             "aliases": ["DSC", "dsc"],
             "extensions": [".dsc"],
-            "configuration": "./language-configuration.json"
+            "configuration": "./dsc-language-configuration.json"
         }],
         "grammars": [{
             "language": "dsc",
-            "scopeName": "scope.dsc",
+            "scopeName": "source.dsc",
             "path": "./syntaxes/dsc.tmLanguage.json"
         }]
     }
