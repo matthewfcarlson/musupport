@@ -71,7 +71,7 @@
 		"constants": {
 			"patterns": [
 				{
-					"name": "support.constant",
+					"name": "constant.language.boolean",
 					"match": "\\b(TRUE|FALSE)"
 				},
 				{
@@ -123,7 +123,7 @@
 		},
 		"strings": {
 			"name": "string.quoted.double.dsc",
-			"begin": "L\"",
+			"begin": "\"",
 			"end": "\"",
 			"patterns": [
 				{
