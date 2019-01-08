@@ -1,4 +1,10 @@
+%YAML 1.2
+---
 name: DSC
+file_extensions:
+  - dsc
+scopeName: source.dsc
+
 patterns:
     -
         include: '#comments'
@@ -85,4 +91,4 @@ repository:
             -
                 name: string.quoted.double.constant
                 match: .
-scopeName: source.dsc
+...

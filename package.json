@@ -12,27 +12,73 @@
         "Programming Languages",
         "Linters"
     ],
+    "activationEvents": [
+        "onCommand:extension.helloWorld",
+        "onLanguage:c",
+        "onLanguage:h",
+        "onLanguage:cpp",
+        "onLanguage:inf",
+        "onLanguage:dsc",
+        "onLanguage:dec"
+    ],
+    "main": "./out/main.js",
     "contributes": {
-        "languages": [{
-            "id": "dsc",
-            "aliases": ["DSC", "dsc"],
-            "extensions": [".dsc"],
-            "configuration": "./dsc-language-configuration.json"
-        }],
-        "grammars": [{
-            "language": "dsc",
-            "scopeName": "source.dsc",
-            "path": "./syntaxes/dsc.tmLanguage.json"
-        }]
+        "commands": [
+            {
+                "command": "extension.helloWorld",
+                "title": "Hello World"
+            }
+        ],
+        "languages": [
+            {
+                "id": "dsc",
+                "aliases": [
+                    "DSC",
+                    "dsc"
+                ],
+                "extensions": [
+                    ".dsc"
+                ],
+                "configuration": "./dsc-language-configuration.json"
+            },
+            {
+                "id": "dec",
+                "aliases": [
+                    "DEC",
+                    "dec"
+                ],
+                "extensions": [
+                    ".dec"
+                ],
+                "configuration": "./dec-language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "dsc",
+                "scopeName": "source.dsc",
+                "path": "./syntaxes/dsc.tmLanguage.json"
+            },
+            {
+                "language": "dec",
+                "scopeName": "source.dec",
+                "path": "./syntaxes/dec.tmLanguage.json"
+            }
+        ]
     },
     "scripts": {
-		"update-vscode": "node ./node_modules/vscode/bin/install",
-		"postinstall": "node ./node_modules/vscode/bin/install"
-	},
-	"devDependencies": {
-		"@types/mocha": "^2.2.33",
-		"@types/node": "^6.0.52",
-		"typescript": "^2.1.5",
-		"vscode": "^1.0.5"
-	}
+        "update-vscode": "node ./node_modules/vscode/bin/install",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^8.10.25",
+        "tslint": "^5.11.0",
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.22",
+        "vscode-jsonrpc": "^4.0.0",
+        "vscode-cpptools": "^2.1.2"
+    }
 }
