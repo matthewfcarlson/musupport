@@ -75,6 +75,17 @@
                     ".dec"
                 ],
                 "configuration": "./dec-language-configuration.json"
+            },
+            {
+                "id": "inf",
+                "aliases": [
+                    "INF",
+                    "inf"
+                ],
+                "extensions": [
+                    ".inf"
+                ],
+                "configuration": "./inf-language-configuration.json"
             }
         ],
         "grammars": [
@@ -92,6 +103,11 @@
                 "language": "fdf",
                 "scopeName": "source.fdf",
                 "path": "./syntaxes/fdf.tmLanguage.json"
+            },
+            {
+                "language": "inf",
+                "scopeName": "source.inf",
+                "path": "./syntaxes/inf.tmLanguage.json"
             }
         ]
     },
