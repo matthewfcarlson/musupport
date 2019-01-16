@@ -2,7 +2,7 @@
     "name": "musupport",
     "displayName": "MuSupport",
     "description": "Language support for files in Project Mu",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "license": "CC-BY-NC-SA-4.0",
     "engines": {
         "vscode": "^1.29.0"
