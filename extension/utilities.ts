@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as timers from 'timers';
 import * as vscode from 'vscode';
+import * as glob from 'glob';
 
 
 // General utilites usable by multiple classes
@@ -93,6 +94,16 @@ export function promisifyReadDir(foldername: string): Promise<string[]> {
     });
   });
 }
+
+export function promisifyGlob(pattern: vscode.GlobPattern, options?:glob.IOptions): Promise<string[]> {
+  return new Promise<string[]>((resolve, reject) => {
+    glob(pattern.toString(), (e, data) => {
+      if (e) reject(e);
+      else resolve(data);
+    });
+  });
+}
+
 
 export function promisifyWriteFile(filename: string, contents: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
