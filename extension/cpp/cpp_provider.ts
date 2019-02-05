@@ -5,10 +5,20 @@ import * as path from 'path';
 import { logger } from '../logger';
 import { PersistentFolderState } from '../persistentState';
 import { promisify } from 'util';
-import { promisifyReadDir, promisifyExists, promisifyGlob, promisifyIsDir, promisifyReadFile } from '../utilities';
+import { containsMuProjects, promisifyReadDir, promisifyExists, promisifyGlob, promisifyIsDir, promisifyReadFile } from '../utilities';
 
 import * as makefile_parser from './makefile_parser';
 import { match } from 'minimatch';
+import { InfStore } from './inf_store';
+import { CCppProperties } from "./cpp_properties";
+
+/*
+Logic:
+1. Identify component .inf
+2. Parse .inf to get package refrences
+3. Parse corresponding package .dec files to get [include] sections
+4. generate include path as the union of all [include] section paths.
+*/
 
 
 function normalizeDriveLetter(pth: string): string {
@@ -20,29 +30,6 @@ function normalizeDriveLetter(pth: string): string {
 
 function hasDriveLetter(pth: string): boolean {
   return isWindows && pth[1] === ':';
-}
-
-function pathMatch(path1: string, path2: string, pkgName: string, workspace: string): number {
-  let path1_short = path1;
-  let path2_short = path2;
-  let matchStrength = 0;
-  if (path1.indexOf(workspace) != -1) {
-    path1_short = path1.substr(workspace.length)
-  }
-  if (path2.indexOf(workspace) != -1) {
-    path2_short = path2.substr(workspace.length)
-  }
-  //logger.info("PATHMATCH:" + path1_short + " and " + path2_short)
-  const path1parts = path1_short.split(/[\\\/]/)
-  const path2parts = path2_short.split(/[\\\/]/)
-  //remove everything until we get to the package
-  while (path1parts.length > 0 && path1parts[0] != pkgName) path1parts.shift();
-  while (path2parts.length > 0 && path2parts[0] != pkgName) path2parts.shift();
-  for (let i = 1; i < path1parts.length && i < path2parts.length; i++) {
-    //logger.info(path1parts[i] + " and " + path2parts[i])
-    if (path1parts[i] == path2parts[i]) matchStrength++;
-  }
-  return matchStrength;
 }
 
 
@@ -73,126 +60,18 @@ export async function InstallCppProvider(context: vscode.ExtensionContext, works
   }
 }
 
-interface MakeFile {
-  path: string,
-  includes: string[]
-}
-
-class MakeFiles {
-  //package, uri, includes
-  private data: Map<string, Map<string, Set<string>>> // TODO this is super ugly
-  private workspace: string;
-  constructor(workspace: string) {
-    this.data = new Map<string, Map<string, Set<string>>>()
-    this.workspace = workspace;
-  }
-  public hasPkg(pkgName: string): boolean {
-    if (this.data.has(pkgName)) return true;
-    return false
-  }
-  public tryCreatePkg(pkgName: string) {
-    if (!this.data.has(pkgName)) {
-      this.data.set(pkgName, new Map<string, Set<string>>());
-    }
-  }
-  public tryClearPkg(pkgName: string) {
-    if (this.data.has(pkgName)) {
-      this.data.get(pkgName).clear()
-      this.data.delete(pkgName);
-    }
-  }
-  public has(pkgName: string): boolean {
-    return this.data.has(pkgName);
-  }
-
-  public get(pkgName: string, subPath: string): string[] {
-    let ret = [];
-    if (!this.data.has(pkgName)) {
-      return [];
-    }
-    const matches = this.data.get(pkgName).keys();
-    let maxMatch = "";
-    let maxMatchStrength = 0;
-    //logger.info("MakeFiles:Get: Looking for matches for " + subPath)
-    for (const match of matches) {
-      //logger.info("MakeFiles:" + match + " vs " + subPath);
-      const matchStrength = pathMatch(match, subPath, pkgName, this.workspace);
-      if (maxMatchStrength < matchStrength) {
-        maxMatch = match;
-        maxMatchStrength = matchStrength;
-      }
-    }
-    const matchData = this.data.get(pkgName).get(maxMatch);
-    if (maxMatch == "") return ret;
-    //logger.info("MakeFiles:Get: We selected" + maxMatch);
-    for (const includePath of matchData) {
-      ret.push(includePath);
-    }
-    return ret;
-  }
-
-
-  public clear() {
-    //clear everything
-    this.data.clear();
-  }
-
-  public async Add(pkgName: string, makepath: string) {
-    //logger.info("MakeFiles:Add: " + pkgName + " - " + makepath)
-    if (!this.data.has(pkgName)) {
-      this.tryCreatePkg(pkgName);
-    }
-    if (!(await promisifyExists(makepath))) {
-      logger.error("THIS PATH DOES NOT EXIST: " + makepath + " PKG:" + pkgName);
-      return
-    }
-    if (!this.data.get(pkgName).has(makepath)) {
-      this.data.get(pkgName).set(makepath, new Set<string>());
-    }
-    else {
-      logger.warn("MakeFiles: removing " + pkgName + " for " + makepath);
-      this.data.get(pkgName).clear();
-    }
-
-    //open the file and read it
-    let contents = await promisifyReadFile(makepath);
-    const debugDir = path.join(path.parse(makepath).dir, "DEBUG")
-    if (contents) {
-      let makeFile = makefile_parser.parseMakefile(contents)
-      if (makeFile.variables["INC"]) {
-        const includes = makeFile.variables["INC"].split(/\s+/);
-        for (const include_path of includes) {
-          const inclde_real_path = include_path.
-            replace("/I", "").
-            replace("$(WORKSPACE)", this.workspace).
-            replace("$(DEBUG_DIR)", debugDir)
-          this.data.get(pkgName).get(makepath).add(inclde_real_path);
-
-        }
-        //logger.info("MakeFiles:Add: Adding " + includes.length + " includes to " + pkgName)
-      }
-      else {
-        logger.error("MakeFiles: The MAKEfile didn't include any includes" + path)
-      }
-    }
-    else {
-      logger.error("MakeFiles:Add: error opening file")
-    };
-  }
-}
-
 export class CppProvider implements CustomConfigurationProvider {
   public readonly workspace: vscode.WorkspaceFolder;
   private packages: string[] = [];
   private disposables: vscode.Disposable[] = [];
   private cppToolsApi: CppToolsApi;
+  private active: boolean;
   private statusBar: vscode.StatusBarItem;
   public readonly extensionId: string = 'musupport';
   public readonly name: string = 'MuCpp';
-  private registered: boolean = false;
-  private foundAutoGens: Map<string, Set<string>>;
-  private foundMakefiles: MakeFiles; //package, uri, includes
+  private infStore: InfStore;
   private selectedName: PersistentFolderState<string>;
+  private packageName: string = "";
 
   private buildRelativePatterns: vscode.RelativePattern[];
   private buildWatchers: vscode.FileSystemWatcher[];
@@ -208,24 +87,27 @@ export class CppProvider implements CustomConfigurationProvider {
     this.selectedName = new PersistentFolderState<string>('musupport_dsc.selectedName', 'None', fsPath);
 
     this.statusBar.tooltip = "Determines which DSC to look at to determine what package build directory we need to look in";
-    this.statusBar.text = this.selectedName.Value || "None";
+    this.packageName = this.selectedName.Value || "None";
+    this.statusBar.text = this.packageName;
     this.statusBar.tooltip = 'Click to change package';
     this.statusBar.command = 'musupport.selectPackage';
     this.statusBar.show();
-    this.foundAutoGens = new Map<string, Set<string>>();
-    this.foundMakefiles = new MakeFiles(fsPath);
+
+    this.active = containsMuProjects(fsPath);
 
     this.buildWatchers = [];
     this.buildRelativePatterns = [];
 
+
+    this.infStore = new InfStore(workspace);
+
     this.setupWatchers();
 
-    this.runPackageRefresh();
+    if (this.active) {
 
-    //this.searchForAutoGens()
-
-    //logger.info("Finished setup");
-
+      this.runPackageRefresh();
+      this.refreshInfs();
+    }
   }
 
   private setupWatchers(): void {
@@ -242,26 +124,32 @@ export class CppProvider implements CustomConfigurationProvider {
     this.buildWatchers.push(buildWatcher2);
     buildWatcher2.onDidChange(this.buildChanged, this, this.disposables);
 
+    vscode.workspace.onDidChangeWorkspaceFolders(events => {
+      events.added.forEach(async folder => {
+        if (containsMuProjects(folder.uri.fsPath)) {
+          CCppProperties.writeDefaultCCppPropertiesJsonIfNotExist(folder.uri);
+
+          //startFloatingPromise(() => this.nMakeJsonRpcServer.initializeWorkspaceFolder(folder.uri, this.workspaceIndexingMode), "Each folder can initialize independently");
+        }
+      });
+    });
+
+  }
+
+  private async refreshInfs() {
+    await this.infStore.Scan();
   }
 
   public async canProvideBrowseConfiguration(_?: vscode.CancellationToken | undefined): Promise<boolean> {
+    if (this.selectedName.Value == 'None') return false;
+    if (this.active == false) return false;
     return true;
   }
 
   private buildChanged(e: vscode.Uri): void {
     logger.log("The build changed")
     logger.log(e.toString())
-    // clear out what we know so far
-    // only clear out if it's in the package
-    const packageName = null;//get the package name and determine
-    if (packageName) {
-      this.foundMakefiles.tryClearPkg(packageName)
-      this.foundAutoGens.get(packageName).clear()
-    }
-    else {
-      this.foundMakefiles.clear()
-      this.foundAutoGens.clear()
-    }
+
   }
 
   public async provideBrowseConfiguration(_?: vscode.CancellationToken | undefined): Promise<WorkspaceBrowseConfiguration> {
@@ -288,81 +176,6 @@ export class CppProvider implements CustomConfigurationProvider {
     return null;
   }
 
-  // Search for AutoGen.h files
-  public async searchForAutoGens(packageName?: string): Promise<boolean> {
-    const fsPath = this.workspace.uri.fsPath;
-
-    if (this.selectedName.Value == 'None') return false;
-    const wsBuildPath = path.join(fsPath, 'Build', this.selectedName.Value)
-    let base = "";
-    if (packageName) {
-      base = path.join(wsBuildPath, "*", "*", packageName);
-      if (this.foundAutoGens.has(packageName)) this.foundAutoGens.get(packageName).clear();
-    }
-    else {
-      base = path.join(wsBuildPath, "*", "*", "*Pkg");
-      this.foundAutoGens.clear();
-    }
-
-    const files = await promisifyGlob(path.join(base, "**", "AutoGen.h"));
-
-    for (const single_file of files) {
-      const filePackageName = this.getPackageFromPath(single_file.substr(wsBuildPath.length))
-      if (filePackageName == null) {
-        logger.error("searchForAutoGens: We couldn't parse a package for " + single_file)
-        continue
-      }
-      if (!this.foundAutoGens.has(filePackageName)) {
-        this.foundAutoGens.set(filePackageName, new Set<string>())
-      }
-      this.foundAutoGens.get(filePackageName).add(single_file);
-    }
-
-    //logger.info("searchForAutoGens: We found " + files.length + " autogen.h files")
-    if (!packageName) this.cppToolsApi.didChangeCustomConfiguration(this);
-
-    if (files.length = 0) return false;
-    return true;
-  }
-
-  // Search for Make Files
-  public async searchForMakeFiles(packageName?: string): Promise<boolean> {
-    const fsPath = this.workspace.uri.fsPath;
-
-    if (this.selectedName.Value == 'None') {
-      logger.error("searchForMakeFiles: We don't have a package to search")
-      return false;
-    }
-    const wsBuildPath = path.join(fsPath, 'Build', this.selectedName.Value)
-    let base = "";
-    if (packageName) {
-      base = path.join(wsBuildPath, "*", "*", packageName);
-      this.foundMakefiles.tryClearPkg(packageName);
-    }
-    else {
-      base = path.join(wsBuildPath, "*", "*", "*Pkg"); 4
-      this.foundMakefiles.clear();
-    }
-
-    const files = await promisifyGlob(path.join(base, "**", "Makefile"));
-
-    for (const single_file of files) {
-      const filePackageName = this.getPackageFromPath(single_file.substr(wsBuildPath.length));
-      if (filePackageName == null) {
-        logger.error("searchForMakeFiles: We couldn't parse a package for " + single_file)
-        continue;
-      }
-      const normalizedFile = path.normalize(single_file);
-      await this.foundMakefiles.Add(filePackageName, normalizedFile);
-    }
-
-    //logger.info("searchForMakeFiles: We found " + files.length + " makefiles files")
-    if (!packageName) this.cppToolsApi.didChangeCustomConfiguration(this);
-
-    if (files.length = 0) return false;
-    return true;
-  }
-
   public async canProvideConfiguration(uri: vscode.Uri, _: vscode.CancellationToken | undefined): Promise<boolean> {
     const fileWp = vscode.workspace.getWorkspaceFolder(uri);
     if (fileWp === undefined || fileWp.index !== this.workspace.index) {
@@ -373,15 +186,10 @@ export class CppProvider implements CustomConfigurationProvider {
     const uriPath = uri.fsPath;
     const basePath = this.workspace.uri.fsPath;
     const uriSubPath = uriPath.substring(basePath.length)
-    if (uriSubPath.startsWith(path.sep + "Build" + path.sep)) {
-      //logger.info("We cannot provide config for a build file?")
-      return false;
-    }
-    const packageName = this.getPackageFromPath(uriSubPath);
-    //kick off search for make files and autogen.h
-    if (this.foundMakefiles.has(packageName)) return true;
-    this.searchForAutoGens(packageName);
-    return await this.searchForMakeFiles(packageName);
+
+    if (this.infStore.HasInfForFile(uri)) return true;
+    return false;
+
   }
 
 
@@ -389,80 +197,8 @@ export class CppProvider implements CustomConfigurationProvider {
     const ret: SourceFileConfigurationItem[] = [];
     const basePath = this.workspace.uri.fsPath;
     for (const uri of uris) {
-      const defines: string[] = ["_DEBUG", "UNICODE", "_UNICODE"];
-      const uriPath = uri.fsPath;
-      const uriSubPath = uriPath.substring(basePath.length)
-      const includePaths: string[] = [basePath];
-      const msvc = true;
 
-      if (uriSubPath.startsWith(path.sep + "Build" + path.sep)) {
-        //logger.info("Skipping " + uri)
-        ret.push({
-          configuration: {
-            defines: defines,
-            includePath: includePaths,
-            intelliSenseMode: msvc ? 'msvc-x64' : 'clang-x64',
-            standard: 'c99',
-          },
-          uri: vscode.Uri.file(uriPath),
-        });
-        continue;
-      }
-
-      //logger.info("-----")
-      //logger.info("Remaping " + uriSubPath)
-
-      let forcedInclude = [];
-      //remove the actual file part
-      const packageName = this.getPackageFromPath(uriSubPath);
-
-      //logger.info("Finding AutoGen for " + packageName)
-      if (this.foundAutoGens.has(packageName)) {
-        const packageFiles = this.foundAutoGens.get(packageName)
-        logger.info("We found autogen files for this package: " + packageFiles.size);
-        // TODO only add the ones that we care about
-        let maxMatchStrength = 0;
-        let maxMatch = "";
-        for (const packageFile of packageFiles) {
-          const matchStrength = pathMatch(packageFile, uriPath, packageName, basePath);
-          if (maxMatchStrength < matchStrength) {
-            maxMatch = packageFile;
-            maxMatchStrength = matchStrength;
-            //logger.info("Better match is "+maxMatch)
-          }
-        }
-        forcedInclude.push(maxMatch);
-      } else {
-        logger.error("WE didn't find any autogen for this package" + packageName)
-      }
-      //logger.info("Finding MakeFiles for " + packageName)
-      if (this.foundMakefiles.has(packageName)) {
-        const packageFiles = this.foundMakefiles.get(packageName, uriPath)
-        logger.info("We found make files for this package: " + packageFiles.length);
-        for (const packageFile of packageFiles) includePaths.push(packageFile);
-        //TODO read the make file we care about and figure what we want to do
-        //TODO store these results by uri?
-      } else {
-        logger.error("WE didn't find makefiles for this package" + packageName)
-      }
-
-      //logger.info("Include Paths: " + includePaths.join(" , "))
-      //logger.info("Force Include Paths: " + forcedInclude.join(" , "))
-
-
-      ret.push({
-        configuration: {
-          defines: defines,
-          includePath: includePaths,
-          forcedInclude: forcedInclude,
-          intelliSenseMode: msvc ? 'msvc-x64' : 'clang-x64',
-          standard: 'c99',
-        },
-        uri: uri,
-      });
     }
-
-
     return ret;
 
   }
@@ -503,11 +239,8 @@ export class CppProvider implements CustomConfigurationProvider {
     });
     if (result !== undefined) {
       if (result !== this.selectedName.Value) {
-        this.foundAutoGens.clear();
-        this.foundMakefiles.clear();
         //kick off a search for autogens and make files
-        this.searchForAutoGens()
-        this.searchForMakeFiles()
+
       }
       this.selectedName.Value = result;
       this.statusBar.text = result;

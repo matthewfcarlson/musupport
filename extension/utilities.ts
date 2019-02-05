@@ -13,6 +13,10 @@ export function getIsWindows(): boolean {
   return nodePlatform === 'win32';
 }
 
+export function containsMuProjects(path:string):boolean{
+  console.log("Utilities- checking in "+path+" is a mu enabled project")
+  return true;
+}
 export async function getClassName(): Promise<string | undefined> {
   const promptString = 'Please enter a class name';
   const className = await vscode.window.showInputBox({
