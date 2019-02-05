@@ -6,7 +6,7 @@ export interface InfData {
 
 }
 export class InfPaser {
-    public static ParseInf(path:string):InfData{
+    public static async ParseInf(path:string):Promise<InfData>{
         return null;
     }
 }
