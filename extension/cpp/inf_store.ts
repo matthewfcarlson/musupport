@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { promisifyReadDir, promisifyExists, promisifyGlob, promisifyIsDir, promisifyReadFile } from '../utilities';
 import { runInContext } from "vm";
+import { InfPaser } from "./inf_parser";
 
 export class InfStore {
     private workspace: vscode.WorkspaceFolder;
@@ -38,7 +39,8 @@ export class InfStore {
           
     }
     private async ProcessInf(path:string){
-        InfParser.
+        const data = InfPaser.ParseInf(path);
+        //TODO add the data to our store?
     }
 
 };
