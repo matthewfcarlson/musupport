@@ -1,11 +1,15 @@
 # musupport README
 
-This supports development in 
+This supports development in
 
 ## Features
 
-- supports DSC files
+- supports DSC, INF, DEC files
 
+## TODO
+- Put CPP properties behind a setting
+- Add UI support for handling Git repos (Create a branch for any changes?)
+- Fix CPP logic
 
 ## Requirements
 
@@ -33,14 +37,6 @@ Users appreciate release notes as you update your extension.
 ### 1.0.0
 
 Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
 
 -----------------------------------------------------------------------------------------------------------
 
