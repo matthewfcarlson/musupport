@@ -117,14 +117,16 @@
         "vscode:prepublish": "npm run compile",
         "build": "npm run compile",
         "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./"
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package"
     },
     "devDependencies": {
         "@types/node": "^8.10.25",
         "tslint": "^5.11.0",
         "typescript": "^2.6.1",
         "typings": "^2.1.1",
-        "vscode": "^1.1.22"
+        "vscode": "^1.1.22",
+        "vsce": "1.57.0"
     },
     "dependencies": {
         "@types/glob": "^7.1.1",

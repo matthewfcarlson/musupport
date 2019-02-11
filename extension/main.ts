@@ -22,7 +22,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const workspaces = vscode.workspace.workspaceFolders;
   const resourceRoot = path.join(context.extensionPath, 'resources');
 
-  InstallCppProvider(context, workspaces, resourceRoot);
+  //InstallCppProvider(context, workspaces, resourceRoot);
 
 }
 
