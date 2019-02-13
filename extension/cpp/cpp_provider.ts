@@ -4,39 +4,19 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { logger } from '../logger';
 import { PersistentFolderState } from '../persistentState';
-import { promisify } from 'util';
-import { containsMuProjects, promisifyReadDir, promisifyExists, promisifyGlob, promisifyIsDir, promisifyReadFile } from '../utilities';
+import { CppProcessor } from './cpp_processor';
 
-import * as makefile_parser from './makefile_parser';
-import { match } from 'minimatch';
-import { InfStore } from './inf_store';
-import { CCppProperties } from "./cpp_properties";
+/**
+ *  Installs the CPP provider for each workspace, as well as installs the commands
+ * @param context 
+ * @param workspaces 
+ * @param resourceRoot 
+ */
 
-/*
-Logic:
-1. Identify component .inf
-2. Parse .inf to get package refrences
-3. Parse corresponding package .dec files to get [include] sections
-4. generate include path as the union of all [include] section paths.
-*/
-
-
-function normalizeDriveLetter(pth: string): string {
-  if (hasDriveLetter(pth)) {
-    return pth.charAt(0).toUpperCase() + pth.slice(1);
-  }
-  return pth;
-}
-
-function hasDriveLetter(pth: string): boolean {
-  return isWindows && pth[1] === ':';
-}
-
-
-const isWindows = (process.platform === 'win32');
 
 export async function InstallCppProvider(context: vscode.ExtensionContext, workspaces: vscode.WorkspaceFolder[], resourceRoot: string) {
   let api: CppToolsApi | undefined = await getCppToolsApi(Version.v2);
+  CppProvider.SetEnabled(true);
   if (api) {
     context.subscriptions.push(api);
     if (api.notifyReady) {
@@ -44,6 +24,7 @@ export async function InstallCppProvider(context: vscode.ExtensionContext, works
         let apis: CppProvider[] = [];
         for (const wp of workspaces) {
           const configProvider = new CppProvider(wp, api, resourceRoot);
+
           api.registerCustomConfigurationProvider(configProvider);
 
           context.subscriptions.push(configProvider);
@@ -59,22 +40,37 @@ export async function InstallCppProvider(context: vscode.ExtensionContext, works
     }
   }
 }
+/**
+ * Uninstalls the CPP Provider, this is a WIP
+ * @param context 
+ * @param workspaces 
+ * @param resourceRoot 
+ */
+export async function UninstallCppProvider(context: vscode.ExtensionContext, workspaces: vscode.WorkspaceFolder[], resourceRoot: string) {
+  let api: CppToolsApi | undefined = await getCppToolsApi(Version.v2);
+  //TODO clean this up
+  logger.info("Disposing off CPP Provider");
+  CppProvider.SetEnabled(false);
+  if (api) {
+    api.dispose(); //not sure how to remove what has been installed
+  }
+}
 
+/**
+ * This class handled talking to the CppToolsAPI and tries to be agnostic of the filesystem underneath
+ */
 export class CppProvider implements CustomConfigurationProvider {
   public readonly workspace: vscode.WorkspaceFolder;
-  private packages: string[] = [];
+
   private disposables: vscode.Disposable[] = [];
   private cppToolsApi: CppToolsApi;
-  private active: boolean;
+  private static enabled: boolean = true;
   private statusBar: vscode.StatusBarItem;
   public readonly extensionId: string = 'musupport';
   public readonly name: string = 'MuCpp';
-  private infStore: InfStore;
   private selectedName: PersistentFolderState<string>;
   private packageName: string = "";
-
-  private buildRelativePatterns: vscode.RelativePattern[];
-  private buildWatchers: vscode.FileSystemWatcher[];
+  private processor: CppProcessor;
 
   constructor(workspace: vscode.WorkspaceFolder, cppToolsApi: CppToolsApi, resourceRoot: string) {
 
@@ -93,64 +89,25 @@ export class CppProvider implements CustomConfigurationProvider {
     this.statusBar.command = 'musupport.selectPackage';
     this.statusBar.show();
 
-    this.active = containsMuProjects(fsPath);
+    this.processor = new CppProcessor(workspace);
 
-    this.buildWatchers = [];
-    this.buildRelativePatterns = [];
-
-
-    this.infStore = new InfStore(workspace);
-
-    this.setupWatchers();
-
-    if (this.active) {
-
-      this.runPackageRefresh();
-      this.refreshInfs();
+    if (this.processor.IsActive()) {
+      this.processor.RefreshInfs();
     }
   }
 
-  private setupWatchers(): void {
-    const fsPath = this.workspace.uri.fsPath;
-    const buildRelativePattern = new vscode.RelativePattern(path.join(fsPath, 'Build'), "BUILDLOG*");
-    const buildWatcher = vscode.workspace.createFileSystemWatcher(buildRelativePattern)
-    buildWatcher.onDidChange(this.buildChanged, this, this.disposables);
-    this.buildRelativePatterns.push(buildRelativePattern);
-    this.buildWatchers.push(buildWatcher);
 
-    const buildRelativePattern2 = new vscode.RelativePattern(path.join(fsPath, 'Build'), "**/*{.dsc,.h,AutoGen}");
-    const buildWatcher2 = vscode.workspace.createFileSystemWatcher(buildRelativePattern2);
-    this.buildRelativePatterns.push(buildRelativePattern2);
-    this.buildWatchers.push(buildWatcher2);
-    buildWatcher2.onDidChange(this.buildChanged, this, this.disposables);
-
-    vscode.workspace.onDidChangeWorkspaceFolders(events => {
-      events.added.forEach(async folder => {
-        if (containsMuProjects(folder.uri.fsPath)) {
-          CCppProperties.writeDefaultCCppPropertiesJsonIfNotExist(folder.uri);
-
-          //startFloatingPromise(() => this.nMakeJsonRpcServer.initializeWorkspaceFolder(folder.uri, this.workspaceIndexingMode), "Each folder can initialize independently");
-        }
-      });
-    });
-
-  }
-
-  private async refreshInfs() {
-    await this.infStore.Scan();
+  public static SetEnabled(isEnabled: boolean) {
+    CppProvider.enabled = isEnabled;
   }
 
   public async canProvideBrowseConfiguration(_?: vscode.CancellationToken | undefined): Promise<boolean> {
     if (this.selectedName.Value == 'None') return false;
-    if (this.active == false) return false;
+    if (this.processor.IsActive() == false) return false;
+    if (!CppProvider.enabled) return false;
     return true;
   }
 
-  private buildChanged(e: vscode.Uri): void {
-    logger.log("The build changed")
-    logger.log(e.toString())
-
-  }
 
   public async provideBrowseConfiguration(_?: vscode.CancellationToken | undefined): Promise<WorkspaceBrowseConfiguration> {
     //TODO: figure out if we are a Mu project or not?
@@ -161,20 +118,7 @@ export class CppProvider implements CustomConfigurationProvider {
     return config;
   }
 
-  private getPackageFromPath(uriSubPath: string): string | null {
-    let pathFragments = path.normalize(uriSubPath).split(path.sep) // should be the file seperator of our system
-    let packageName = "";
-    while (pathFragments.length > 0 && packageName == "") {
-      const pathFragmentPiece = pathFragments.shift();
-      //      //logger.info(pathFragmentPiece);
-      if (pathFragmentPiece.endsWith("Pkg")) {
-        packageName = pathFragmentPiece;
-        return packageName;
-      }
-    }
 
-    return null;
-  }
 
   public async canProvideConfiguration(uri: vscode.Uri, _: vscode.CancellationToken | undefined): Promise<boolean> {
     const fileWp = vscode.workspace.getWorkspaceFolder(uri);
@@ -183,11 +127,13 @@ export class CppProvider implements CustomConfigurationProvider {
     }
     if (this.selectedName.Value == 'None') return false;
 
+    if (!CppProvider.enabled) return false;
+
     const uriPath = uri.fsPath;
     const basePath = this.workspace.uri.fsPath;
     const uriSubPath = uriPath.substring(basePath.length)
 
-    if (this.infStore.HasInfForFile(uri)) return true;
+    if (this.processor.HasConfigForFile(uri)) return true;
     return false;
 
   }
@@ -214,15 +160,13 @@ export class CppProvider implements CustomConfigurationProvider {
     }
   }
 
-  private async couldBeUpdated(): Promise<void> {
-    const result = await vscode.window.showInformationMessage('Intellisense configurations might have been updated. Refresh them now?', 'Yes', 'No');
-    if (result && result === 'Yes') {
-      await this.runPackageRefresh();
-    }
+  public async Refresh(): Promise<void> {
+    await this.processor.RunPackageRefresh();
   }
+
   public async selectPackage(): Promise<void> {
     const selections: string[] = [];
-    for (const c of this.packages) {
+    for (const c of this.processor.GetPackages()) {
       selections.push(`${c}`);
     }
     if (selections.length === 0) {
@@ -230,7 +174,7 @@ export class CppProvider implements CustomConfigurationProvider {
         modal: true,
       }, 'Yes', 'No');
       if (configResult === 'Yes') {
-        await this.runPackageRefresh();
+        await this.processor.RunPackageRefresh();
       }
       return;
     }
@@ -247,24 +191,7 @@ export class CppProvider implements CustomConfigurationProvider {
       this.cppToolsApi.didChangeCustomConfiguration(this);
     }
   }
-  public async runPackageRefresh(): Promise<boolean> {
-    //logger.info("Running a package refresh")
-    //Check to make sure we have all the packages we need
-    this.packages = [];
-    const fsPath = this.workspace.uri.fsPath;
-    const buildPath = path.join(fsPath, 'Build');
-    const exists = await promisifyExists(buildPath);
 
-    if (!exists) return false;
-    const folders = await promisifyReadDir(buildPath)
-    for (const folder of folders) {
-      const folderPath = path.join(fsPath, 'Build', folder);
-      if (await promisifyIsDir(folderPath)) {
-        this.packages.push(folder)
-      }
-    }
-    return true
-  }
 }
 
 
@@ -299,7 +226,7 @@ function createCommands(context: vscode.ExtensionContext, configLoaders: CppProv
     for (const wp of workspaces) {
       for (const loader of configLoaders) {
         if (wp.uri.fsPath === loader.workspace.uri.fsPath) {
-          await loader.runPackageRefresh();
+          await loader.Refresh();
         }
       }
     }
