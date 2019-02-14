@@ -19,6 +19,12 @@
 		},
 		{
 			"include": "#constants"
+		},
+		{
+			"include":"#library_classes"
+		},
+		{
+			"include": "#files"
 		}
 
 	],
@@ -80,6 +86,22 @@
 				},
 				{
 					"include": "#strings"
+				}
+			]
+		},
+		"library_classes": {
+			"patterns": [
+				{
+					"name": "constant.language.libraryclass.dsc",
+					"match": "([A-Z][A-Za-z_0-9]*)\\s*\\|"
+				}
+			]
+		},
+		"files": {
+			"patterns": [
+				{
+					"name":"constant.language.file.dsc",
+					"match":"(\\?[A-Za-z_\\-\\s0-9\\.]+)+\\.([A-Za-z0-9]+)"
 				}
 			]
 		},

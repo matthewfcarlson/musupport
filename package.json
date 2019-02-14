@@ -2,7 +2,7 @@
     "name": "musupport",
     "displayName": "MuSupport",
     "description": "Language support for files in Project Mu",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "license": "CC-BY-NC-SA-4.0",
     "engines": {
         "vscode": "^1.29.0"
@@ -42,6 +42,17 @@
                 "category": "Mu Support"
             }
         ],
+        "configuration": {
+            "type": "object",
+            "title": "Mu Support configuration",
+            "properties": {
+                "musupport.useAsCppProvider": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Provides a Cpp Provider to the system."
+                }
+            }
+        },
         "languages": [
             {
                 "id": "dsc",
@@ -115,15 +126,19 @@
         "update-vscode": "node ./node_modules/vscode/bin/install",
         "postinstall": "node ./node_modules/vscode/bin/install",
         "vscode:prepublish": "npm run compile",
+        "build": "npm run compile",
         "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./"
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package",
+        "install": "code --install-extension release/musupport-0.0.3.vsix"
     },
     "devDependencies": {
         "@types/node": "^8.10.25",
         "tslint": "^5.11.0",
         "typescript": "^2.6.1",
         "typings": "^2.1.1",
-        "vscode": "^1.1.22"
+        "vscode": "^1.1.22",
+        "vsce": "1.57.0"
     },
     "dependencies": {
         "@types/glob": "^7.1.1",
