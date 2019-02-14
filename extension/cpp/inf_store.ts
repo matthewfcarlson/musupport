@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { promisifyExists, promisifyGlob, promisifyIsDir, delay } from '../utilities';
 import { InfPaser } from "./inf_parser";
+import { DecPaser } from "./dec_parser";
 
 /**
  * This class stores the relationship between a given file and the inf
@@ -51,23 +52,39 @@ export class InfStore {
         //TODO make sure that the uri isn't a file (make sure it is a directory)
         const basePath = (uri) ? uri.fsPath : this.workspace.uri.fsPath;
 
-        logger.info("INF_STORE: Scanning workspace")
-        const files = await promisifyGlob(path.join(basePath, "!(Build)", "**", "*.inf"));
+        logger.info("INF_STORE: Scanning workspace ")
+        //scan dec files
+        const decFiles = await promisifyGlob(path.join(basePath, "!(Build)", "**", "*.dec"));
+        logger.info("INF_STORE: processing "+decFiles.length+" dec files");
+        for (const single_file of decFiles) {
+            this.ProcessDec(single_file);
+        }
 
-        for (const single_file of files) {
+        const infFiles = await promisifyGlob(path.join(basePath, "!(Build)", "**", "*.inf"));
+        logger.info("INF_STORE: processing "+infFiles.length+" inf files");
+        for (const single_file of infFiles) {
             this.ProcessInf(single_file);
         }
+        
         logger.info("INF_STORE: Finished Scanning");
         this.scanInProgress = false;
 
     }
     private async ProcessInf(path: string) {
         //TODO add the data to our store?
-        logger.info("INF_STORE", path);
-        this.infs.push(path);
+        //logger.info("INF_STORE", path);
+        //this.infs.push(path);
 
         const data = await InfPaser.ParseInf(path);
-        logger.info("INFSTORE data", data);
+        //logger.info("INFSTORE data", data);
+    }
+    private async ProcessDec(path: string) {
+        //TODO add the data to our store?
+        //logger.info("INF_STORE", path);
+        //this.decs.push(path);
+
+        const data = await DecPaser.ParseDec(path);
+        //logger.info("INFSTORE data", data);
     }
 
 };
