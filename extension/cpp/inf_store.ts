@@ -57,11 +57,11 @@ export class InfStore {
         for (const single_file of files) {
             this.ProcessInf(single_file);
         }
+        logger.info("INF_STORE: Finished Scanning");
         this.scanInProgress = false;
 
     }
     private async ProcessInf(path: string) {
-        if (this.infs.length >= 2) return;
         //TODO add the data to our store?
         logger.info("INF_STORE", path);
         this.infs.push(path);
