@@ -18,7 +18,6 @@ function SetupContext(context: vscode.ExtensionContext){
   const workspaces = vscode.workspace.workspaceFolders;
   const resourceRoot = path.join(context.extensionPath, 'resources');
   const config = vscode.workspace.getConfiguration("musupport");
-  logger.info(JSON.stringify(config));
   if (config["useAsCppProvider"] != undefined)
   {
     if (config["useAsCppProvider"]) InstallCppProvider(context, workspaces, resourceRoot);

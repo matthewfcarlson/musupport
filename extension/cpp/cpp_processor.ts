@@ -20,14 +20,14 @@ Logic:
 
 
 function normalizeDriveLetter(pth: string): string {
-  if (hasDriveLetter(pth)) {
-    return pth.charAt(0).toUpperCase() + pth.slice(1);
-  }
-  return pth;
+    if (hasDriveLetter(pth)) {
+        return pth.charAt(0).toUpperCase() + pth.slice(1);
+    }
+    return pth;
 }
 
 function hasDriveLetter(pth: string): boolean {
-  return isWindows && pth[1] === ':';
+    return isWindows && pth[1] === ':';
 }
 
 
@@ -54,8 +54,6 @@ export class CppProcessor {
 
         this.setupWatchers();
         this.RunPackageRefresh();
-        this.infStore.Scan();
-
     }
 
     private setupWatchers(): void {

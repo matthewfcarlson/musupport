@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as timers from 'timers';
 import * as vscode from 'vscode';
 import * as glob from 'glob';
+import { logger } from './logger';
 
 
 // General utilites usable by multiple classes
@@ -13,9 +14,16 @@ export function getIsWindows(): boolean {
   return nodePlatform === 'win32';
 }
 
-export function containsMuProjects(path:string):boolean{
-  console.log("Utilities- checking in "+path+" is a mu enabled project")
+export function containsMuProjects(path: string): boolean {
+  console.log("Utilities- checking in " + path + " is a mu enabled project")
   return true;
+}
+export function delay(milliseconds: number): Promise<void> {
+  return new Promise<void>(resolve => {
+    setTimeout(() => {
+      resolve();
+    }, milliseconds);
+  });
 }
 export async function getClassName(): Promise<string | undefined> {
   const promptString = 'Please enter a class name';
@@ -50,28 +58,25 @@ export async function getPackageName(): Promise<string | undefined> {
 }
 
 export function readFileAsync(file: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    fs.readFile(file, 'utf8', (err, data) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(data);
-      }
-    });
-  });
+  return promisifyReadFile(file);
 }
 
 export function promisifyReadFile(filename: string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     fs.readFile(filename, 'utf8', (err, data) => {
-      if (err) {
+      if (err != null) { 
+        logger.error("promisifyReadFile err")
+        logger.error(typeof err);
         reject(err);
-      } else {
-        resolve(data);
       }
+      else resolve(data);
     });
   });
 }
+
+export function stringTrim(string: string) {
+  return string.replace(/^\s+|\s+$/g, '');
+};
 
 export function promisifyExists(filename: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
@@ -99,7 +104,7 @@ export function promisifyReadDir(foldername: string): Promise<string[]> {
   });
 }
 
-export function promisifyGlob(pattern: vscode.GlobPattern, options?:glob.IOptions): Promise<string[]> {
+export function promisifyGlob(pattern: vscode.GlobPattern, options?: glob.IOptions): Promise<string[]> {
   return new Promise<string[]>((resolve, reject) => {
     glob(pattern.toString(), (e, data) => {
       if (e) reject(e);
@@ -160,22 +165,6 @@ export function setExtensionContext(context: vscode.ExtensionContext): void {
   extensionContext = context;
 }
 
-export function getDesktopEnabled(buildgradle: string): Promise<boolean | undefined> {
-  return new Promise<boolean | undefined>((resolve) => {
-    fs.readFile(buildgradle, 'utf8', (err, dataIn) => {
-      if (err) {
-        resolve(undefined);
-      } else {
-        const dataOut = dataIn.match(/def\s+includeDesktopSupport\s*=\s*(true|false)/m);
-        if (dataOut === null) {
-          resolve(undefined);
-        } else {
-          resolve(dataOut[1] === 'true');
-        }
-      }
-    });
-  });
-}
 
 export async function promptForProjectOpen(toFolder: vscode.Uri): Promise<boolean> {
   const openSelection = await vscode.window.showInformationMessage('Would you like to open the folder?', {

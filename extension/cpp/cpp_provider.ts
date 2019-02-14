@@ -120,7 +120,7 @@ export class CppProvider implements CustomConfigurationProvider {
 
 
 
-  public async canProvideConfiguration(uri: vscode.Uri, _: vscode.CancellationToken | undefined): Promise<boolean> {
+  public async canProvideConfiguration(uri: vscode.Uri, cancel: vscode.CancellationToken | undefined): Promise<boolean> {
     const fileWp = vscode.workspace.getWorkspaceFolder(uri);
     if (fileWp === undefined || fileWp.index !== this.workspace.index) {
       return false;
