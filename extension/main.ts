@@ -13,15 +13,19 @@ import { setExtensionContext } from './utilities';
 import * as vscode from 'vscode';
 
 
-function SetupContext(context: vscode.ExtensionContext){
-  logger.info("SETTING UP CONTEXT");
+function SetupContext(context: vscode.ExtensionContext) {
+  logger.info("MAIN - SETTING UP CONTEXT");
   const workspaces = vscode.workspace.workspaceFolders;
   const resourceRoot = path.join(context.extensionPath, 'resources');
   const config = vscode.workspace.getConfiguration("musupport");
-  if (config["useAsCppProvider"] != undefined)
-  {
-    if (config["useAsCppProvider"]) InstallCppProvider(context, workspaces, resourceRoot);
-    else UninstallCppProvider(context, workspaces, resourceRoot);
+  try {
+    if (config["useAsCppProvider"] != undefined) {
+      if (config["useAsCppProvider"]) InstallCppProvider(context, workspaces, resourceRoot);
+      else UninstallCppProvider(context, workspaces, resourceRoot);
+    }
+  }
+  catch (err) {
+    logger.error("MAIN error", err)
   }
 }
 // this method is called when your extension is activated
@@ -31,10 +35,9 @@ export async function activate(context: vscode.ExtensionContext) {
   setExtensionContext(context);
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
-  
 
   SetupContext(context);
-  vscode.workspace.onDidChangeConfiguration((e)=>{
+  vscode.workspace.onDidChangeConfiguration((e) => {
     SetupContext(context);
   });
 

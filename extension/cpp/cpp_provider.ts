@@ -5,12 +5,13 @@ import * as path from 'path';
 import { logger } from '../logger';
 import { PersistentFolderState } from '../persistentState';
 import { CppProcessor } from './cpp_processor';
+import { appendFile } from 'fs';
 
 /**
  *  Installs the CPP provider for each workspace, as well as installs the commands
- * @param context 
- * @param workspaces 
- * @param resourceRoot 
+ * @param context
+ * @param workspaces
+ * @param resourceRoot
  */
 
 
@@ -23,13 +24,16 @@ export async function InstallCppProvider(context: vscode.ExtensionContext, works
       if (workspaces !== undefined) {
         let apis: CppProvider[] = [];
         for (const wp of workspaces) {
-          const configProvider = new CppProvider(wp, api, resourceRoot);
+          if (CppProvider.IsInWorkspace(wp.index) == true) {
+            logger.info("CPP_PROVIDER Skipping workspace "+wp.name+" as CPP is already installed")
+            continue;
+          }
+          const cppProvider = new CppProvider(wp, api, resourceRoot);
+          apis.push(cppProvider);
 
-          api.registerCustomConfigurationProvider(configProvider);
+          api.registerCustomConfigurationProvider(cppProvider);
 
-          context.subscriptions.push(configProvider);
-          api.notifyReady(configProvider);
-          apis.push(configProvider)
+          context.subscriptions.push(cppProvider);
         }
         createCommands(context, apis)
       }
@@ -42,9 +46,9 @@ export async function InstallCppProvider(context: vscode.ExtensionContext, works
 }
 /**
  * Uninstalls the CPP Provider, this is a WIP
- * @param context 
- * @param workspaces 
- * @param resourceRoot 
+ * @param context
+ * @param workspaces
+ * @param resourceRoot
  */
 export async function UninstallCppProvider(context: vscode.ExtensionContext, workspaces: vscode.WorkspaceFolder[], resourceRoot: string) {
   let api: CppToolsApi | undefined = await getCppToolsApi(Version.v2);
@@ -53,6 +57,9 @@ export async function UninstallCppProvider(context: vscode.ExtensionContext, wor
   CppProvider.SetEnabled(false);
   if (api) {
     api.dispose(); //not sure how to remove what has been installed
+  }
+  for (const sub of context.subscriptions){
+    if (sub instanceof CppProvider) sub.dispose();
   }
 }
 
@@ -71,6 +78,16 @@ export class CppProvider implements CustomConfigurationProvider {
   private selectedName: PersistentFolderState<string>;
   private packageName: string = "";
   private processor: CppProcessor;
+
+  private static wpInstalls: Set<Number> = new Set<Number>();
+
+  /**
+   * Determines whether a CPP provider has been installed for a given
+   * @param index
+   */
+  public static IsInWorkspace(index:number):boolean{
+    return CppProvider.wpInstalls.has(index);
+  }
 
   constructor(workspace: vscode.WorkspaceFolder, cppToolsApi: CppToolsApi, resourceRoot: string) {
 
@@ -92,8 +109,20 @@ export class CppProvider implements CustomConfigurationProvider {
     this.processor = new CppProcessor(workspace);
 
     if (this.processor.IsActive()) {
-      this.processor.RefreshInfs();
+      this.FirstTimeSetup();
     }
+
+    CppProvider.wpInstalls.add(workspace.index);
+
+  }
+
+  /**
+   * Waits for the refresh to finish
+   */
+  private async FirstTimeSetup(){
+    await this.processor.RefreshInfs();
+    logger.info("CPP_PROVIDER Firsttime setup is finished");
+    this.cppToolsApi.notifyReady(this);
   }
 
 
@@ -158,6 +187,8 @@ export class CppProvider implements CustomConfigurationProvider {
     for (const d of this.disposables) {
       d.dispose();
     }
+    //removing the index from the WP installs
+    CppProvider.wpInstalls.delete(this.workspace.index);
   }
 
   public async Refresh(): Promise<void> {
