@@ -1,18 +1,18 @@
-import { promisifyReadFile, stringTrim } from "../utilities";
-import { logger } from "../logger";
+import { promisifyReadFile, stringTrim } from "../../utilities";
+import { logger } from "../../logger";
+import { DecData } from "../types";
+import * as path from 'path';
 
-export interface DecData {
-    includes: string[];
-}
 export class DecPaser {
-    public static async ParseDec(path: string): Promise<DecData> {
+    public static async ParseDec(decpath: string): Promise<DecData> {
         // Join continued lines
 
         var data: DecData = {
             includes: [],
+            decPath: decpath
         };
         try {
-            const str = await promisifyReadFile(path);
+            const str = await promisifyReadFile(decpath);
             //replace \r\n, strip comments, replace double newlines with just one, replace multiple whitespaces with one
             const lines = str.replace(/\\[\r\n]+/g, '').replace(/\r/g, "\n").replace(/#.*[$\n]/g, '\n').replace(/\n\n+/g, '\n').replace(/[\t ]{2,}/g, " ").split(/\n/)
 
@@ -41,7 +41,10 @@ export class DecPaser {
             logger.error(JSON.stringify(err));
             logger.error(typeof err);
         }
-        
+
+        const decDirPath = path.dirname(decpath);
+        data.includes = data.includes.map(x => path.join(decDirPath, x))
+
         return data;
     }
 }

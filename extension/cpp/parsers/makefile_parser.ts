@@ -1,4 +1,3 @@
-import { logger } from "../logger";
 
 interface ParseOptions {
   strict?: boolean;

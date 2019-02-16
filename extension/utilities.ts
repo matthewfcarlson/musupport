@@ -64,7 +64,7 @@ export function readFileAsync(file: string): Promise<string> {
 export function promisifyReadFile(filename: string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     fs.readFile(filename, 'utf8', (err, data) => {
-      if (err != null) { 
+      if (err != null) {
         logger.error("promisifyReadFile err")
         logger.error(typeof err);
         reject(err);
@@ -77,6 +77,20 @@ export function promisifyReadFile(filename: string): Promise<string> {
 export function stringTrim(string: string) {
   return string.replace(/^\s+|\s+$/g, '');
 };
+
+export function getPackageFromPath(uriSubPath: string): string | null {
+  let pathFragments = path.normalize(uriSubPath).split(path.sep) // should be the file seperator of our system
+  let packageName = "";
+  while (pathFragments.length > 0 && packageName == "") {
+      const pathFragmentPiece = pathFragments.shift();
+      if (pathFragmentPiece.endsWith("Pkg")) {
+          packageName = pathFragmentPiece;
+          return packageName;
+      }
+  }
+
+  return null;
+}
 
 export function promisifyExists(filename: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {

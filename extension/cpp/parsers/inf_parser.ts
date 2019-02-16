@@ -1,25 +1,21 @@
-import { promisifyReadFile, stringTrim } from "../utilities";
-import { logger } from "../logger";
+import { promisifyReadFile, stringTrim } from "../../utilities";
+import { logger } from "../../logger";
+import * as path from 'path';
+import { InfData } from "../types";
 
-export interface InfData {
-    sources: string[];
-    packages: string[];
-    pcds: string[];
-    guids: string[]; // protocols and guids
-
-}
 export class InfPaser {
-    public static async ParseInf(path: string): Promise<InfData> {
+    public static async ParseInf(infpath: string): Promise<InfData> {
         // Join continued lines
 
         var data: InfData = {
             sources: [],
             packages: [],
             pcds: [],
-            guids: []
+            guids: [],
+            infPath: infpath
         };
         try {
-            const str = await promisifyReadFile(path);
+            const str = await promisifyReadFile(infpath);
             //replace \r\n, strip comments, replace double newlines with just one, replace multiple whitespaces with one
             const lines = str.replace(/\\[\r\n]+/g, '').replace(/\r/g, "\n").replace(/#.*[$\n]/g, '\n').replace(/\n\n+/g, '\n').replace(/[\t ]{2,}/g, " ").split(/\n/)
 
@@ -52,7 +48,9 @@ export class InfPaser {
             logger.error(JSON.stringify(err));
             logger.error(typeof err);
         }
-        
+        const infDirPath = path.dirname(infpath);
+        data.sources = data.sources.map(x => path.join(infDirPath, x))
+
         return data;
     }
 }

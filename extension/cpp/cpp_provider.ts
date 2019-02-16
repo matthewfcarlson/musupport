@@ -25,13 +25,11 @@ export async function InstallCppProvider(context: vscode.ExtensionContext, works
         let apis: CppProvider[] = [];
         for (const wp of workspaces) {
           if (CppProvider.IsInWorkspace(wp.index) == true) {
-            logger.info("CPP_PROVIDER Skipping workspace "+wp.name+" as CPP is already installed")
+            logger.info("CPP_PROVIDER Skipping workspace " + wp.name + " as CPP is already installed")
             continue;
           }
           const cppProvider = new CppProvider(wp, api, resourceRoot);
           apis.push(cppProvider);
-
-          api.registerCustomConfigurationProvider(cppProvider);
 
           context.subscriptions.push(cppProvider);
         }
@@ -58,7 +56,7 @@ export async function UninstallCppProvider(context: vscode.ExtensionContext, wor
   if (api) {
     api.dispose(); //not sure how to remove what has been installed
   }
-  for (const sub of context.subscriptions){
+  for (const sub of context.subscriptions) {
     if (sub instanceof CppProvider) sub.dispose();
   }
 }
@@ -85,7 +83,7 @@ export class CppProvider implements CustomConfigurationProvider {
    * Determines whether a CPP provider has been installed for a given
    * @param index
    */
-  public static IsInWorkspace(index:number):boolean{
+  public static IsInWorkspace(index: number): boolean {
     return CppProvider.wpInstalls.has(index);
   }
 
@@ -119,10 +117,17 @@ export class CppProvider implements CustomConfigurationProvider {
   /**
    * Waits for the refresh to finish
    */
-  private async FirstTimeSetup(){
-    await this.processor.RefreshInfs();
-    logger.info("CPP_PROVIDER Firsttime setup is finished");
-    this.cppToolsApi.notifyReady(this);
+  private async FirstTimeSetup() {
+    vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: "Mu Support: Performing a first time scan of your workspace",
+      cancellable: false
+    }, async (progress, token) => {
+      await this.processor.RefreshWorkspace();
+      logger.info("CPP_PROVIDER Firsttime setup is finished");
+      this.cppToolsApi.registerCustomConfigurationProvider(this);
+      this.cppToolsApi.notifyReady(this);
+    });
   }
 
 
@@ -157,11 +162,9 @@ export class CppProvider implements CustomConfigurationProvider {
     if (this.selectedName.Value == 'None') return false;
 
     if (!CppProvider.enabled) return false;
+    logger.info("CPP_PROVIDER checking if we can provide configuration for ", uri)
 
-    const uriPath = uri.fsPath;
-    const basePath = this.workspace.uri.fsPath;
-    const uriSubPath = uriPath.substring(basePath.length)
-
+    //what to do when we can't provide this configurations
     if (this.processor.HasConfigForFile(uri)) return true;
     return false;
 
@@ -172,7 +175,8 @@ export class CppProvider implements CustomConfigurationProvider {
     const ret: SourceFileConfigurationItem[] = [];
     const basePath = this.workspace.uri.fsPath;
     for (const uri of uris) {
-
+      const data = this.processor.GetConfigForFile(uri);
+      ret.push(data);
     }
     return ret;
 
@@ -192,7 +196,10 @@ export class CppProvider implements CustomConfigurationProvider {
   }
 
   public async Refresh(): Promise<void> {
-    await this.processor.RunPackageRefresh();
+    await Promise.all([
+      this.processor.RunPlatformPackageRefresh(),
+      this.processor.RefreshWorkspace()
+    ]);
   }
 
   public async selectPackage(): Promise<void> {
@@ -205,7 +212,7 @@ export class CppProvider implements CustomConfigurationProvider {
         modal: true,
       }, 'Yes', 'No');
       if (configResult === 'Yes') {
-        await this.processor.RunPackageRefresh();
+        await this.processor.RunPlatformPackageRefresh();
       }
       return;
     }

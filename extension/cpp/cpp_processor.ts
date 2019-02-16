@@ -3,10 +3,11 @@ import * as path from 'path';
 import { logger } from '../logger';
 import { containsMuProjects, promisifyReadDir, promisifyExists, promisifyGlob, promisifyIsDir, promisifyReadFile } from '../utilities';
 
-import * as makefile_parser from './makefile_parser';
+import * as makefile_parser from './parsers/makefile_parser';
 import { match } from 'minimatch';
-import { InfStore } from './inf_store';
+import { InfStore, DecStore } from './data_store';
 import { CCppProperties } from "./cpp_properties";
+import { SourceFileConfigurationItem, SourceFileConfiguration } from 'vscode-cpptools';
 // When long running- use this progress Sample
 //https://github.com/Microsoft/vscode-extension-samples/tree/master/progress-sample
 
@@ -38,6 +39,7 @@ export class CppProcessor {
     private buildRelativePatterns: vscode.RelativePattern[];
     private buildWatchers: vscode.FileSystemWatcher[];
     private infStore: InfStore;
+    private decStore: DecStore;
     public readonly workspace: vscode.WorkspaceFolder;
     private active: boolean;
     private packages: string[] = [];
@@ -46,6 +48,7 @@ export class CppProcessor {
     constructor(workspace: vscode.WorkspaceFolder) {
         this.workspace = workspace;
         this.infStore = new InfStore(workspace);
+        this.decStore = new DecStore(workspace);
         const fsPath = workspace.uri.fsPath;
         this.active = containsMuProjects(fsPath);
         this.buildWatchers = [];
@@ -53,7 +56,7 @@ export class CppProcessor {
 
 
         this.setupWatchers();
-        this.RunPackageRefresh();
+        this.RunPlatformPackageRefresh();
     }
 
     private setupWatchers(): void {
@@ -86,17 +89,49 @@ export class CppProcessor {
         return this.infStore.HasInfForFile(uri);
     }
 
+    public GetConfigForFile(uri: vscode.Uri): SourceFileConfigurationItem {
+        const data = this.infStore.GetInfsForFile(uri);
+        logger.info("CPP_PROCESSOR: get config for file", uri, data);
+        var includePaths = new Set<string>();
+        var defines = new Set<string>();
+
+        for (const infData of data) { //for each inf that includes this file
+            for (const decFile of infData.packages) { //for each package in the inf
+                const decList = this.decStore.GetDataForFile(decFile);
+                for (const decData of decList) { //for each dec that was found
+                    for (const decInclude of decData.includes) { //for each include in this dec
+                        includePaths.add(decInclude); //append to the list of the paths
+                    }
+                }
+            }
+        }
+        logger.info("CPP_PROCESSOR: incldue paths ", Array.from(includePaths))
+        const configuration: SourceFileConfiguration = {
+            includePath: Array.from(includePaths),
+            defines: Array.from(defines),
+            standard: "c11",
+            intelliSenseMode: "msvc-x64"
+        };
+
+        return {
+            uri: uri,
+            configuration: configuration
+        };
+    }
+
     public IsActive(): boolean {
         return this.active;
     }
 
-    public async RefreshInfs() {
+    public async RefreshWorkspace() {
         //refresh the inf's
+        await this.decStore.Scan();
         await this.infStore.Scan();
+
     }
 
     public GetPackages(): string[] {
-        if (this.packages.length == 0) this.RunPackageRefresh();
+        if (this.packages.length == 0) this.RunPlatformPackageRefresh();
         return this.packages;
     }
 
@@ -106,36 +141,23 @@ export class CppProcessor {
 
     }
 
-    private getPackageFromPath(uriSubPath: string): string | null {
-        let pathFragments = path.normalize(uriSubPath).split(path.sep) // should be the file seperator of our system
-        let packageName = "";
-        while (pathFragments.length > 0 && packageName == "") {
-            const pathFragmentPiece = pathFragments.shift();
-            //      //logger.info(pathFragmentPiece);
-            if (pathFragmentPiece.endsWith("Pkg")) {
-                packageName = pathFragmentPiece;
-                return packageName;
-            }
-        }
-
-        return null;
-    }
-    public async RunPackageRefresh(): Promise<boolean> {
+    public async RunPlatformPackageRefresh(): Promise<boolean> {
         //logger.info("Running a package refresh")
         //Check to make sure we have all the packages we need
         this.packages = [];
-        const fsPath = this.workspace.uri.fsPath;
-        const buildPath = path.join(fsPath, 'Build');
-        const exists = await promisifyExists(buildPath);
+        const basePath = this.workspace.uri.fsPath;
+        var data = new Set<string>();
 
-        if (!exists) return false;
-        const folders = await promisifyReadDir(buildPath)
-        for (const folder of folders) {
-            const folderPath = path.join(fsPath, 'Build', folder);
-            if (await promisifyIsDir(folderPath)) {
-                this.packages.push(folder)
-            }
+        //scan dec files for platform package files
+        const decFiles = await promisifyGlob(path.join(basePath, "**", "PlatformPkg.dsc"));
+        for (const single_file of decFiles) {
+            const single_dir = path.dirname(single_file);
+            const packageName = path.basename(single_dir);
+            data.add(packageName);
         }
+
+        this.packages = Array.from(data);
         return true
     }
+
 }
