@@ -12,6 +12,10 @@
         "Programming Languages",
         "Linters"
     ],
+    "extensionDependencies": [
+        "ms-vscode.cpptools",
+        "ms-python.python"
+    ],
     "activationEvents": [
         "onCommand:extension.helloWorld",
         "workspaceContains:Build/BUILDLOG.txt",
