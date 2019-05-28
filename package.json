@@ -16,6 +16,9 @@
         "ms-vscode.cpptools",
         "ms-python.python"
     ],
+    "extensionPack": [
+        "thog.vscode-asl"
+    ],
     "activationEvents": [
         "onCommand:extension.helloWorld",
         "workspaceContains:Build/BUILDLOG.txt",
