@@ -5,6 +5,7 @@ import * as timers from 'timers';
 import * as vscode from 'vscode';
 import * as glob from 'glob';
 import { logger } from './logger';
+import { execCommand } from './exec';
 
 
 // General utilites usable by multiple classes
@@ -219,4 +220,20 @@ export function getPythonPath(): string {
 	// }
 
 	return path;
+}
+
+export async function validatePythonPath() {
+  let pythonPath = await getPythonPath();
+
+  // TODO: Find a safer way to detect if python exists in the system PATH
+  try {
+      let {stdout, stderr} = await execCommand(pythonPath + ' --version', { });
+      logger.info("Python Version: " + stdout);
+  }
+  catch (e) {
+      // TODO: This should show a message to the user
+      logger.error("pythonPath does not point to a valid python.exe interpreter.\nMake sure it exists in the system path or points directly to python.exe");
+      //utils.error('Could not locate python.exe', e);
+      return;
+  }
 }

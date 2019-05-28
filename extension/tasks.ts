@@ -2,6 +2,7 @@
 import * as vscode from 'vscode';
 import * as utils from './utilities';
 import { logger } from './logger';
+import { ProjectManager } from './projectmanager';
 
 // See this for why task definitions have to be a 1:1 mapping to tasks.json
 // https://github.com/Microsoft/vscode/issues/33523
@@ -20,16 +21,31 @@ enum UefiTaskAction {
 // Ie, you cannot customize it with abitrary paths/flags
 interface UefiTaskDefinition extends vscode.TaskDefinition {
     task: UefiTaskAction;
-    profile?: string;
+    profile?: string; // eg. 'DEV', 'RELEASE'
 }
 
+/*
+    The UefiTasks class is responsible for providing build tasks that can be used in tasks.json.
 
+    This makes two types of build task available:
+        uefi-corebuild.build  (Invokes 'PlatformBuild.py' for the current project)
+        uefi-corebuild.update (Invokes 'PlatformBuild.py --UPDATE' for the current project)
+*/
 export class UefiTasks implements vscode.Disposable {
-    constructor() {
-        
+    projManager: ProjectManager;
+
+    constructor(projManager: ProjectManager) {
+        this.projManager = projManager;
     }
 
     register() {
+
+        vscode.tasks.onDidStartTask(async (e) => {
+            //let all_tasks = await vscode.tasks.fetchTasks();
+            //let task = e.execution.task;
+            return;
+        });
+
         vscode.tasks.registerTaskProvider(UEFI_BUILD_PROVIDER, {
             provideTasks: () => {
                 return this.getTasks();
@@ -51,19 +67,26 @@ export class UefiTasks implements vscode.Disposable {
         // TODO
     }
 
-
     getTasks(): vscode.Task[] { 
         let buildTasks: vscode.Task[] = [];
 
-        let configs = ['DEV'];
-        //let configs = this.projManager.getAvailableConfigs(); // TODO: Scan for known build configurations
-        //utils.debug(`Generate build tasks for project ${this.projManager.getCurrentProject().projectName} (configs: ${configs})`);
+        // Generate a uefi-corebuild.build task for each known config/profile (eg. 'DEV', 'RELEASE')
+        let configs = this.projManager.getAvailableConfigs();
+        let currProj = this.projManager.getCurrentProject();
+        if (!currProj) {
+            logger.error('No project selected - cannot generate build tasks');
+            return null;
+        }
+
+        logger.info(`Generate build tasks for project ${currProj.projectName} (configs: ${configs})`);
+
         if (configs) {
             for (var conf of configs) {
                 buildTasks.push(this.createBuildTask(`Build ${conf}`, conf));
             }
         }
 
+        // Generate a uefi-corebuild.update task
         buildTasks.push(this.createUpdateTask('Update'));
         
         return buildTasks;

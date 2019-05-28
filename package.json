@@ -20,7 +20,6 @@
         "thog.vscode-asl"
     ],
     "activationEvents": [
-        "onCommand:extension.helloWorld",
         "workspaceContains:Build/BUILDLOG.txt",
         "onLanguage:c",
         "onLanguage:h",
@@ -28,8 +27,7 @@
         "onLanguage:inf",
         "onLanguage:dsc",
         "onLanguage:dec",
-        "onCommand:musupport.refreshPackages",
-        "onCommand:musupport.selectPackage"
+        "onCommand:musupport.*"
     ],
     "main": "./out/main.js",
     "contributes": {
@@ -47,6 +45,21 @@
                 "command": "musupport.refreshPackages",
                 "title": "Refresh DSC Packages",
                 "category": "Mu Support"
+            },
+            {
+                "command": "musupport.update",
+                "title": "Update Platform",
+                "category": "Mu Support"
+            },
+            {
+                "command": "musupport.install_corebuild",
+                "title": "Install Mu Build Environment",
+                "category": "Mu Support"
+            },
+            {
+                "command": "musupport.scan",
+                "title": "Scan Repository",
+                "category": "Mu Support"
             }
         ],
         "configuration": {
@@ -57,9 +70,63 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Provides a Cpp Provider to the system."
+                },
+                
+                "musupport.platformDsc": {
+                    "type": "string",
+                    "default": "**/PlatformPkg.dsc",
+                    "description": "A glob to use to locate the platform build DSC for any projects in the workspace",
+                    "scope": "resource"
+                },
+                "musupport.platformBuildScript": {
+                    "type": "string",
+                    "default": "**/PlatformBuild.py",
+                    "description": "A glob to use to locate the platform build script for any projects in the workspace",
+                    "scope": "resource"
+                },
+                "musupport.platformBuildScriptArgs": {
+                    "type": "array",
+                    "description": "Arguments to pass to the platform build script",
+                    "default": [
+                        "Profile=${config}",
+                        "LaunchLogOnSuccess=FALSE",
+                        "LaunchLogOnError=FALSE",
+                        "--VERBOSE",
+                        "BUILDCAPSULE=TRUE"
+                    ],
+                    "scope": "resource"
+                },
+
+                "musupport.currentPlatformBuildScriptPath": {
+                    "type": "string",
+                    "description": "(Generated automatically) Path to the active platform build script",
+                    "scope": "resource"
+                },
+                "musupport.currentPlatform": {
+                    "type": "string",
+                    "description": "(Generated automatically) The active platform currently selected",
+                    "scope": "resource"
                 }
             }
         },
+        "taskDefinitions": [
+            {
+                "type": "uefi-corebuild",
+                "required": [
+                    "task"
+                ],
+                "properties": {
+                    "task": {
+                        "type": "string",
+                        "description": "The action to perform"
+                    },
+                    "profile": {
+                        "type": "string",
+                        "description": "The project profile to build"
+                    }
+                }
+            }
+        ],
         "languages": [
             {
                 "id": "dsc",
