@@ -195,3 +195,28 @@ export async function promptForProjectOpen(toFolder: vscode.Uri): Promise<boolea
   }
   return true;
 }
+
+export function getPythonPath(): string {
+	const config = vscode.workspace.getConfiguration(null, null);
+	let path: string = null;
+
+	/*path = config.get('mu.pythonPath');
+	if (!path) {
+		path = config.get('python.pythonPath');
+		if (!path) {
+			error('No python path is set');
+		}
+	}*/
+
+  path = config.get('python.pythonPath');
+  if (!path) {
+    logger.error('No python path is set');
+  }
+
+	//path = fs.realpathSync(path);
+	// if (!path || !fs.existsSync(path)) {
+	//     return;
+	// }
+
+	return path;
+}

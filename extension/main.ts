@@ -1,16 +1,15 @@
 
 
+import * as vscode from 'vscode';
 import { InstallCppProvider, UninstallCppProvider } from "./cpp/cpp_provider";
 import * as path from 'path';
 import { PersistentFolderState } from './persistentState';
 import { logger } from './logger';
 import { setExtensionContext } from './utilities';
+import { UefiTasks } from "./tasks";
 
-// Dispose of the 'api' in your extension's deactivate() method, or whenever you want to unregister the provider.
 
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+let tasks: UefiTasks;
 
 
 function SetupContext(context: vscode.ExtensionContext) {
@@ -41,10 +40,16 @@ export async function activate(context: vscode.ExtensionContext) {
     SetupContext(context);
   });
 
+  tasks = new UefiTasks();
+  tasks.register();
 }
 
 
-
-
 // this method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate() {
+  if (tasks) {
+    tasks.dispose();
+    tasks = undefined;
+  }
+
+}
