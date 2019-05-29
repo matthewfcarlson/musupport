@@ -2,7 +2,8 @@
     "name": "musupport",
     "displayName": "MuSupport",
     "description": "Language support for files in Project Mu",
-    "version": "0.0.3",
+    "repository": "https://github.com/matthewfcarlson/musupport/",
+    "version": "0.0.4",
     "license": "CC-BY-NC-SA-4.0",
     "engines": {
         "vscode": "^1.29.0"
@@ -71,7 +72,7 @@
                     "default": false,
                     "description": "Provides a Cpp Provider to the system."
                 },
-                
+
                 "musupport.platformDsc": {
                     "type": "string",
                     "default": "**/PlatformPkg.dsc",
@@ -208,7 +209,7 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "package": "vsce package",
-        "install": "code --install-extension release/musupport-0.0.3.vsix"
+        "install": "code --install-extension release/musupport-0.0.4.vsix"
     },
     "devDependencies": {
         "@types/node": "^8.10.25",
