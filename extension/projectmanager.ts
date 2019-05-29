@@ -136,11 +136,19 @@ export class ProjectManager implements vscode.Disposable {
 
     async selectProject(projectName: string = undefined): Promise<string|null> {
         if (!projectName) {
-            projectName = await vscode.window.showQuickPick(this.availableProjects.map(proj => proj.projectName));
-            if (!projectName) {
+            // Display a drop-down picker
+            let items: vscode.QuickPickItem[] = this.availableProjects.map(proj => { return {
+                label:  proj.projectName,
+                // Show either the PlatformBuild.py path or the PlatformPkg.dsc path
+                detail: (proj.platformBuildScriptPath || proj.platformDscPath), 
+            }});
+            let selectedItem = await vscode.window.showQuickPick(items);
+            if (!selectedItem || !selectedItem.label) {
                 // Selection cancelled
                 return null;
             }
+
+            projectName = selectedItem.label;
         }
 
         if (projectName) {
