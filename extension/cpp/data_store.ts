@@ -187,6 +187,7 @@ export class DecStore {
 
 }
 
+/*
 export class PackageStore {
     public static async GetDevicePackages(root: vscode.Uri): Promise<string[]> {
         const basePath = root.fsPath;
@@ -207,3 +208,4 @@ export class PackageStore {
         return listData;
     }
 }
+*/

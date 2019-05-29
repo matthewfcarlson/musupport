@@ -56,7 +56,7 @@ export class CppProcessor {
 
 
         this.setupWatchers();
-        this.RunPlatformPackageRefresh();
+        //this.RunPlatformPackageRefresh();
     }
 
     private setupWatchers(): void {
@@ -131,7 +131,7 @@ export class CppProcessor {
     }
 
     public GetPackages(): string[] {
-        if (this.packages.length == 0) this.RunPlatformPackageRefresh();
+        //if (this.packages.length == 0) this.RunPlatformPackageRefresh();
         return this.packages;
     }
 
@@ -141,7 +141,7 @@ export class CppProcessor {
 
     }
 
-    public async RunPlatformPackageRefresh(): Promise<boolean> {
+    /*public async RunPlatformPackageRefresh(): Promise<boolean> {
         //logger.info("Running a package refresh")
         //Check to make sure we have all the packages we need
         this.packages = [];
@@ -158,6 +158,6 @@ export class CppProcessor {
 
         this.packages = Array.from(data);
         return true
-    }
+    }*/
 
 }

@@ -1,7 +1,8 @@
 
 
 import * as vscode from 'vscode';
-import { InstallCppProvider, UninstallCppProvider } from "./cpp/cpp_provider";
+//import { InstallCppProvider, UninstallCppProvider } from "./cpp/cpp_provider";
+import * as cpp_provider from './cpp/cpp_provider';
 import * as path from 'path';
 import { PersistentFolderState } from './persistentState';
 import { logger } from './logger';
@@ -41,6 +42,14 @@ export class MainClass implements vscode.Disposable {
             this.projManager,
             this.commands
         );
+
+        // Event handlers
+        this.disposables.push(this.repoScanner.onProjectDiscovered((p) => {
+
+        }));
+        this.disposables.push(this.projManager.onProjectSelected((p) => {
+            cpp_provider.CppProvider.setActiveProject(p);
+        }));
     }
 
     // Called on extension activation only
@@ -49,6 +58,7 @@ export class MainClass implements vscode.Disposable {
         try {
             this.commands.register(this.context);
             this.tasks.register();
+            this.projManager.register();
 
             let scanCommand = this.commands.executeCommand('musupport.scan');
             // TODO: On scan completion load or update the C/C++ extension
@@ -70,8 +80,8 @@ export class MainClass implements vscode.Disposable {
         try {
             // TODO: Move this into a class & merge my CPP provider code...
             if (config["useAsCppProvider"] != undefined) {
-                if (config["useAsCppProvider"]) InstallCppProvider(this.context, workspaces, resourceRoot);
-                else UninstallCppProvider(this.context, workspaces, resourceRoot);
+                if (config["useAsCppProvider"]) cpp_provider.InstallCppProvider(this.context, workspaces, resourceRoot);
+                else cpp_provider.UninstallCppProvider(this.context, workspaces, resourceRoot);
             }
 
             // Locate the current python interpreter

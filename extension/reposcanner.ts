@@ -6,9 +6,9 @@ import { ProjectDefinition, ProjectManager } from './projectmanager';
 import { stringify } from 'querystring';
 import { logger } from './logger';
 
-/*
-    The RepoScanner class is responsible for scanning the repository for projects and other information.
-    It may feed this information into the ProjectManager or the C/C++ language provider.
+/**
+ * The RepoScanner class is responsible for scanning the repository for projects and other information.
+ * It may feed this information into the ProjectManager or the C/C++ language provider.
 */
 export class RepoScanner implements vscode.Disposable {
     private readonly _onProjectDiscovered: vscode.EventEmitter<ProjectDefinition> = new vscode.EventEmitter<ProjectDefinition>();
@@ -21,10 +21,10 @@ export class RepoScanner implements vscode.Disposable {
         this._onProjectDiscovered.dispose();
     }
 
-    /*
-        Scan the workspace for projects, as defined by musupport.platformDsc glob pattern.
-        A project must have a DSC file, and may optionally have a PlatformBuild.py build script.
-        If the PlatformBuild.py build script is not present, functionality will be limited.
+   /**
+    * Scan the workspace for projects, as defined by musupport.platformDsc glob pattern.
+    * A project must have a DSC file, and may optionally have a PlatformBuild.py build script.
+    * If the PlatformBuild.py build script is not present, functionality will be limited.
     */
    async scanForProjects(): Promise<ProjectDefinition[]> {
         const config = vscode.workspace.getConfiguration(null, null);
@@ -47,6 +47,11 @@ export class RepoScanner implements vscode.Disposable {
             .filter((def) => (def)); // Remove null entries
     }
 
+    /**
+     * Create a new project definition from a DSC file
+     * 
+     * @param uri The path to the DSC file that represents the project
+     */
     private async createProjectDefFromDsc(uri: vscode.Uri) : Promise<ProjectDefinition> {
         if (!uri) {
             throw new Error('Project uri must not be null');

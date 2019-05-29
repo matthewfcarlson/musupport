@@ -71,17 +71,17 @@
                     "default": false,
                     "description": "Provides a Cpp Provider to the system."
                 },
-                
+
                 "musupport.platformDsc": {
                     "type": "string",
-                    "default": "**/PlatformPkg.dsc",
-                    "description": "A glob to use to locate the platform build DSC for any projects in the workspace",
+                    "default": "PlatformPkg.dsc",
+                    "description": "A pattern used to find the platform DSC file in the workspace",
                     "scope": "resource"
                 },
                 "musupport.platformBuildScript": {
                     "type": "string",
-                    "default": "**/PlatformBuild.py",
-                    "description": "A glob to use to locate the platform build script for any projects in the workspace",
+                    "default": "PlatformBuild.py",
+                    "description": "The platform build script that accompanies the platform DSC. Must be in the same directory as the DSC.",
                     "scope": "resource"
                 },
                 "musupport.platformBuildScriptArgs": {

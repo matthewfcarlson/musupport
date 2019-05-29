@@ -6,6 +6,7 @@ import { logger } from '../logger';
 import { PersistentFolderState } from '../persistentState';
 import { CppProcessor } from './cpp_processor';
 import { appendFile } from 'fs';
+import { ProjectDefinition } from '../projectmanager';
 
 /**
  *  Installs the CPP provider for each workspace, as well as installs the commands
@@ -107,7 +108,7 @@ export class CppProvider implements CustomConfigurationProvider {
     this.processor = new CppProcessor(workspace);
 
     if (this.processor.IsActive()) {
-      this.FirstTimeSetup();
+      //this.FirstTimeSetup();
     }
 
     CppProvider.wpInstalls.add(workspace.index);
@@ -117,7 +118,7 @@ export class CppProvider implements CustomConfigurationProvider {
   /**
    * Waits for the refresh to finish
    */
-  private async FirstTimeSetup() {
+  /*private async FirstTimeSetup() {
     vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: "Mu Support: Performing a first time scan of your workspace",
@@ -128,6 +129,13 @@ export class CppProvider implements CustomConfigurationProvider {
       this.cppToolsApi.registerCustomConfigurationProvider(this);
       this.cppToolsApi.notifyReady(this);
     });
+  }*/
+
+
+
+  public static setActiveProject(proj: ProjectDefinition) {
+    //this.cppToolsApi.didChangeCustomConfiguration(this);
+    // TODO!
   }
 
 
@@ -197,12 +205,12 @@ export class CppProvider implements CustomConfigurationProvider {
 
   public async Refresh(): Promise<void> {
     await Promise.all([
-      this.processor.RunPlatformPackageRefresh(),
+      //this.processor.RunPlatformPackageRefresh(),
       this.processor.RefreshWorkspace()
     ]);
   }
 
-  public async selectPackage(): Promise<void> {
+  /*public async selectPackage(): Promise<void> {
     const selections: string[] = [];
     for (const c of this.processor.GetPackages()) {
       selections.push(`${c}`);
@@ -228,14 +236,14 @@ export class CppProvider implements CustomConfigurationProvider {
       this.statusBar.text = result;
       this.cppToolsApi.didChangeCustomConfiguration(this);
     }
-  }
+  }*/
 
 }
 
 
 
 function createCommands(context: vscode.ExtensionContext, configLoaders: CppProvider[]) {
-  context.subscriptions.push(vscode.commands.registerCommand('musupport.selectPackage', async () => {
+  /*context.subscriptions.push(vscode.commands.registerCommand('musupport.selectPackage', async () => {
     const workspaces = vscode.workspace.workspaceFolders;
 
     if (workspaces === undefined) {
@@ -249,7 +257,7 @@ function createCommands(context: vscode.ExtensionContext, configLoaders: CppProv
         }
       }
     }
-  }));
+  }));*/
 
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with  registerCommand
