@@ -32,11 +32,11 @@ export class RepoScanner implements vscode.Disposable {
         const platformDsc: string = config.get('musupport.platformDsc');
         //config.update('musupport.currentProj', '', false);
         if (!platformBuildScript) {
-            logger.error('musupport.platformBuildScript is not defined');
+            utils.showError('musupport.platformBuildScript is not defined');
             return null;
         }
         if (!platformDsc) {
-            logger.error('musupport.platformDsc is not defined');
+            utils.showError('musupport.platformDsc is not defined');
             return null;
         }
 
@@ -47,7 +47,7 @@ export class RepoScanner implements vscode.Disposable {
         //console.log(`Projects detected in workspace (using ${platformBuildScript})`);
         //console.log(platformBuildScriptFiles);
         if (!platformBuildScriptFiles) {
-            vscode.window.showWarningMessage('No UEFI projects detected in the workspace (Looking for PlatformBuild.py)');
+            utils.showWarning(`No UEFI projects detected in the workspace (Looking for '${platformBuildScript}')`);
             return null;
         }
 
@@ -57,7 +57,7 @@ export class RepoScanner implements vscode.Disposable {
             .filter((def) => (def)); // Remove null entries
     }
 
-    private async createProjectDef(uri: vscode.Uri, platformDscFiles: vscode.Uri[]) {
+    private async createProjectDef(uri: vscode.Uri, platformDscFiles: vscode.Uri[]) : Promise<ProjectDefinition> {
         if (!uri) {
             throw new Error('Project uri must not be null');
         }
@@ -77,7 +77,7 @@ export class RepoScanner implements vscode.Disposable {
             def.platformDscPath = matches[0].fsPath;
         }
         if (!def.platformDscPath) {
-            logger.info(`WARNING: Could not find a DSC for project '${def.projectName}'`);
+            logger.warn(`Could not find a DSC for project '${def.projectName}'`);
             return null;
         }
 

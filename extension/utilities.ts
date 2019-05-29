@@ -237,3 +237,18 @@ export async function validatePythonPath() {
       return;
   }
 }
+
+export function showMessage(message: string) {
+	logger.info(message);
+	return vscode.window.showInformationMessage('MU: ' + message);
+}
+
+export function showWarning(message: string) {
+	logger.warn(message);
+	return vscode.window.showWarningMessage('MU: ' + message);
+}
+
+export function showError(message: string) {
+  logger.error(message);
+  return vscode.window.showInformationMessage('MU: ' + message);
+}
