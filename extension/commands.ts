@@ -16,15 +16,18 @@ import { execPython } from './exec';
         musupport.install_corebuild      Installs MU corebuild via PIP
 */
 export class UefiCommands implements vscode.Disposable {
+    private workspace: vscode.WorkspaceFolder;
     private projManager: ProjectManager;
     private repoScanner: RepoScanner;
     private term: UefiTerminal;
 
     constructor(
+        workspace: vscode.WorkspaceFolder,
         projManager: ProjectManager,
         repoScanner: RepoScanner,
         term: UefiTerminal
     ) {
+        this.workspace = workspace;
         this.projManager = projManager;
         this.repoScanner = repoScanner;
         this.term = term;
@@ -129,7 +132,7 @@ export class UefiCommands implements vscode.Disposable {
     async isMuEnvironmentInstalled() : Promise<boolean> {
         // Try to import the Mu pip package to see if it is installed
         try {
-            await execPython('from MuEnvironment import CommonBuildEntry');
+            await execPython(this.workspace, 'from MuEnvironment import CommonBuildEntry');
             logger.info('Mu environment is installed');
             return true;
         } catch {

@@ -11,10 +11,13 @@ import { logger } from './logger';
  * It may feed this information into the ProjectManager or the C/C++ language provider.
 */
 export class RepoScanner implements vscode.Disposable {
+    private workspace: vscode.WorkspaceFolder;
+
     private readonly _onProjectDiscovered: vscode.EventEmitter<ProjectDefinition> = new vscode.EventEmitter<ProjectDefinition>();
     public  readonly  onProjectDiscovered: vscode.Event<ProjectDefinition>        = this._onProjectDiscovered.event;
 
-    constructor() {
+    constructor(workspace: vscode.WorkspaceFolder) {
+        this.workspace = workspace;
     }
 
     dispose() {
@@ -35,7 +38,7 @@ export class RepoScanner implements vscode.Disposable {
         }
 
         // Find all DSC files in the workspace that match the specified glob
-        var platformDscFiles = await vscode.workspace.findFiles(`**/${platformDsc}`); // TODO: Better path handling
+        var platformDscFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspace,`**/${platformDsc}`));  // TODO: Better path handling
         if (!platformDscFiles) {
             return null;
         }
@@ -73,7 +76,7 @@ export class RepoScanner implements vscode.Disposable {
             let projFiles = await utils.promisifyGlob(path.join(proj.projectRoot, platformBuildScript));
             if (projFiles) {
                 proj.platformBuildScriptPath = projFiles[0]; // TODO: Make this relative?
-                logger.info(`Platform build script found: ${proj.platformBuildScriptPath}`);
+                //logger.info(`Platform build script found: ${proj.platformBuildScriptPath}`);
             }
             // let projFiles = await utils.promisifyReadDir(proj.projectRoot);
             // if (projFiles && projFiles.indexOf(platformBuildScript) >= 0) {

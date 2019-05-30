@@ -10,6 +10,8 @@ import { execCommand } from './exec';
 
 // General utilites usable by multiple classes
 
+export const extension = vscode.extensions.getExtension('microsoft.musupport');
+
 export function getIsWindows(): boolean {
   const nodePlatform: NodeJS.Platform = process.platform;
   return nodePlatform === 'win32';
@@ -197,33 +199,36 @@ export async function promptForProjectOpen(toFolder: vscode.Uri): Promise<boolea
   return true;
 }
 
-export function getPythonPath(): string {
-	const config = vscode.workspace.getConfiguration(null, null);
-	let path: string = null;
+export function getPythonPath(workspace: vscode.WorkspaceFolder): string {
+  const config = vscode.workspace.getConfiguration("python", workspace.uri);
+  return config.get("pythonPath");
 
-	/*path = config.get('mu.pythonPath');
-	if (!path) {
-		path = config.get('python.pythonPath');
-		if (!path) {
-			error('No python path is set');
-		}
-	}*/
+	// const config = vscode.workspace.getConfiguration(null, null);
+	// let path: string = null;
 
-  path = config.get('python.pythonPath');
-  if (!path) {
-    logger.error('No python path is set');
-  }
+	// /*path = config.get('mu.pythonPath');
+	// if (!path) {
+	// 	path = config.get('python.pythonPath');
+	// 	if (!path) {
+	// 		error('No python path is set');
+	// 	}
+	// }*/
 
-	//path = fs.realpathSync(path);
-	// if (!path || !fs.existsSync(path)) {
-	//     return;
-	// }
+  // path = config.get('python.pythonPath');
+  // if (!path) {
+  //   logger.error('No python path is set');
+  // }
 
-	return path;
+	// //path = fs.realpathSync(path);
+	// // if (!path || !fs.existsSync(path)) {
+	// //     return;
+	// // }
+
+	//return path;
 }
 
-export async function validatePythonPath() {
-  let pythonPath = await getPythonPath();
+export async function validatePythonPath(workspace: vscode.WorkspaceFolder) {
+  let pythonPath = await getPythonPath(workspace);
 
   // TODO: Find a safer way to detect if python exists in the system PATH
   try {
@@ -231,9 +236,8 @@ export async function validatePythonPath() {
       logger.info("Python Version: " + stdout);
   }
   catch (e) {
-      // TODO: This should show a message to the user
-      logger.error("pythonPath does not point to a valid python.exe interpreter.\nMake sure it exists in the system path or points directly to python.exe");
-      //utils.error('Could not locate python.exe', e);
+      logger.error(e);
+      showError("pythonPath does not point to a valid interpreter.\nMake sure it exists in the system path or points directly to python.exe");
       return;
   }
 }
@@ -250,5 +254,5 @@ export function showWarning(message: string) {
 
 export function showError(message: string) {
   logger.error(message);
-  return vscode.window.showInformationMessage('MU: ' + message);
+  return vscode.window.showErrorMessage('MU: ' + message);
 }

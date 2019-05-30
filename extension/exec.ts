@@ -18,12 +18,12 @@ export function execCommand(command: string, options: cp.ExecOptions): Promise<{
 }
 
 // Execute a python expression asynchronously and return stdout
-export async function execPython(expression: string, cwd: string = null, timeout_ms = 10000): Promise<string> {
+export async function execPython(workspace: vscode.WorkspaceFolder, expression: string, cwd: string = null, timeout_ms = 10000): Promise<string> {
 	if (!cwd) {
 		cwd = vscode.workspace.rootPath; // TODO: Support multiple workspaces...
 	}
 
-	let pythonPath = utils.getPythonPath();
+	let pythonPath = utils.getPythonPath(workspace);
 	try {
 		let options: cp.SpawnOptions = { 
 			cwd: cwd,
@@ -71,12 +71,12 @@ export async function execPython(expression: string, cwd: string = null, timeout
 }
 
 // Execute a python script file asynchronously and return stdout
-export async function execPythonScript(file: vscode.Uri, args: string[], cwd: string = null, timeout_ms = 10000): Promise<string> {
+export async function execPythonScript(workspace: vscode.WorkspaceFolder, file: vscode.Uri, args: string[], cwd: string = null, timeout_ms = 10000): Promise<string> {
 	if (!cwd) {
 		cwd = vscode.workspace.rootPath;
 	}
 
-	let pythonPath = utils.getPythonPath();
+	let pythonPath = utils.getPythonPath(workspace);
 	try {
 		let options: cp.ExecOptions = { 
 			cwd: cwd

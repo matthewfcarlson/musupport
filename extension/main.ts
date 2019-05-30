@@ -2,7 +2,6 @@
 
 import * as vscode from 'vscode';
 //import { InstallCppProvider, UninstallCppProvider } from "./cpp/cpp_provider";
-import * as cpp_provider from './cpp/cpp_provider';
 import * as path from 'path';
 import { PersistentFolderState } from './persistentState';
 import { logger } from './logger';
@@ -13,6 +12,8 @@ import { ProjectManager } from './projectmanager';
 import { UefiTerminal } from './terminal';
 import { UefiCommands } from './commands';
 import * as exec from './exec';
+import { CppConfigurationProvider } from './cpp/cpp_provider';
+//import { CppProvider } from './cpp/cpp_provider';
 
 let main: MainClass = undefined;
 
@@ -20,27 +21,35 @@ export class MainClass implements vscode.Disposable {
     disposables: vscode.Disposable[] = [];
     context:     vscode.ExtensionContext;
 
+    workspace:   vscode.WorkspaceFolder;
     repoScanner: RepoScanner;
     projManager: ProjectManager;
     tasks:       UefiTasks;
     terminal:    UefiTerminal;
     commands:    UefiCommands;
+    cppProvider: CppConfigurationProvider;
+    //cppProvider: cpp_provider.CppProvider;
 
+    constructor(context: vscode.ExtensionContext, workspace: vscode.WorkspaceFolder) {
+        //const workspaces = vscode.workspace.workspaceFolders;
+        const resourceRoot = path.join(context.extensionPath, 'resources');
 
-    constructor(context: vscode.ExtensionContext) {
         this.context      = context;
-        this.terminal     = new UefiTerminal();
-        this.repoScanner  = new RepoScanner();
+        this.workspace    = workspace;
+        this.terminal     = new UefiTerminal(this.workspace);
+        this.repoScanner  = new RepoScanner(this.workspace);
         this.projManager  = new ProjectManager(this.repoScanner);
-        this.tasks        = new UefiTasks(this.projManager);
-        this.commands     = new UefiCommands(this.projManager, this.repoScanner, this.terminal);
+        this.tasks        = new UefiTasks(this.workspace, this.projManager);
+        this.commands     = new UefiCommands(this.workspace, this.projManager, this.repoScanner, this.terminal);
+        this.cppProvider  = new CppConfigurationProvider(context, this.workspace);
 
         this.disposables.push(
             this.terminal,
             this.tasks,
             this.repoScanner,
             this.projManager,
-            this.commands
+            this.commands,
+            this.cppProvider 
         );
 
         // Event handlers
@@ -48,20 +57,24 @@ export class MainClass implements vscode.Disposable {
 
         }));
         this.disposables.push(this.projManager.onProjectSelected((p) => {
-            cpp_provider.CppProvider.setActiveProject(p);
+            this.cppProvider.setActiveProject(p);
         }));
     }
 
-    // Called on extension activation only
+    /**
+     * Called once on extension activation.
+     * Use this to register with the UI, but nothing should depend on the current config...
+     */
     async activate() {
         logger.info('Initializing Extension');
         try {
             this.commands.register(this.context);
             this.tasks.register();
             this.projManager.register();
+            //this.cppProvider.register();
 
-            let scanCommand = this.commands.executeCommand('musupport.scan');
-            // TODO: On scan completion load or update the C/C++ extension
+            // Begin a workspace scan (can also be invoked through a VSCode command)
+            this.commands.executeCommand('musupport.scan');
 
             logger.info('Extension ready!');
         }
@@ -70,22 +83,27 @@ export class MainClass implements vscode.Disposable {
         }
     }
 
-    // Called whenever the configuration changes
+    /**
+     * Called on extension activation and whenever the configuration changes.
+     * Use this to re-fresh things that depend on the current config.
+     */
     async setup() {
         logger.info("MAIN - SETTING UP CONTEXT");
-        const workspaces = vscode.workspace.workspaceFolders;
-        const resourceRoot = path.join(this.context.extensionPath, 'resources');
         const config = vscode.workspace.getConfiguration("musupport");
 
         try {
-            // TODO: Move this into a class & merge my CPP provider code...
-            if (config["useAsCppProvider"] != undefined) {
-                if (config["useAsCppProvider"]) cpp_provider.InstallCppProvider(this.context, workspaces, resourceRoot);
-                else cpp_provider.UninstallCppProvider(this.context, workspaces, resourceRoot);
+            if (config["useAsCppProvider"]) {
+                this.cppProvider.register();
+                let curProj = this.projManager.getCurrentProject();
+                if (curProj) {
+                    this.cppProvider.setActiveProject(curProj);
+                }
+            } else {
+                this.cppProvider.unregister();
             }
 
             // Locate the current python interpreter
-            await utils.validatePythonPath();
+            await utils.validatePythonPath(this.workspace);
         }
         catch (err) {
           logger.error("Error setting up extension", err)
@@ -101,17 +119,23 @@ export class MainClass implements vscode.Disposable {
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-  utils.setExtensionContext(context);
+    utils.setExtensionContext(context);
 
-    main = new MainClass(context);
-    await main.activate();
-    await main.setup();
+    let workspaces = vscode.workspace.workspaceFolders;
+    if (workspaces && workspaces.length >= 1) {
+        let workspace = workspaces[0]; // TODO: Support multiple workspaces...
 
-    vscode.workspace.onDidChangeConfiguration((e) => {
-        main.setup(); // TODO: await?
-    });
+        main = new MainClass(context, workspace);
+        await main.activate();
+        await main.setup();
 
+        vscode.workspace.onDidChangeConfiguration((e) => {
+            main.setup(); // TODO: await?
+        });
 
+    } else {
+        utils.showError('No workspaces available!');
+    }
 }
 
 // this method is called when your extension is deactivated

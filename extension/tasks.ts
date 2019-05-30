@@ -32,9 +32,11 @@ interface UefiTaskDefinition extends vscode.TaskDefinition {
         uefi-corebuild.update (Invokes 'PlatformBuild.py --UPDATE' for the current project)
 */
 export class UefiTasks implements vscode.Disposable {
+    workspace: vscode.WorkspaceFolder;
     projManager: ProjectManager;
 
-    constructor(projManager: ProjectManager) {
+    constructor(workspace: vscode.WorkspaceFolder, projManager: ProjectManager) {
+        this.workspace = workspace;
         this.projManager = projManager;
     }
 
@@ -131,7 +133,7 @@ export class UefiTasks implements vscode.Disposable {
 
         let options: vscode.ProcessExecutionOptions = {
         };
-        let pythonPath = utils.getPythonPath();
+        let pythonPath = utils.getPythonPath(this.workspace);
         let task = new vscode.Task(definition, name, 'UEFI',
             new vscode.ProcessExecution(pythonPath, args, options),
             UEFI_BUILD_PROBLEM_MATCHER);
@@ -150,7 +152,7 @@ export class UefiTasks implements vscode.Disposable {
             "--update"
         ];
         let options: vscode.ProcessExecutionOptions = {};
-        let pythonPath = utils.getPythonPath();
+        let pythonPath = utils.getPythonPath(this.workspace);
         let task = new vscode.Task(definition, name, 'UEFI',
             new vscode.ProcessExecution(pythonPath, args, options),
             UEFI_BUILD_PROBLEM_MATCHER);

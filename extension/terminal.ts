@@ -3,10 +3,11 @@ import * as vscode from 'vscode';
 import * as utils from './utilities';
 
 export class UefiTerminal implements vscode.Disposable {
+    private workspace: vscode.WorkspaceFolder;
     private uefiTerminal : vscode.Terminal = null;
 
-    constructor() {
-
+    constructor(workspace: vscode.WorkspaceFolder) {
+        this.workspace = workspace;
     }
 
     dispose() {
@@ -80,7 +81,7 @@ export class UefiTerminal implements vscode.Disposable {
     // Run a python command in the UEFI terminal window,
     // using the currently configured python interpreter (python.pythonPath)
     async runPythonCommand(args: string[], cwd: string = null, runAsShell: boolean = false) {
-        let pythonPath = utils.getPythonPath();
+        let pythonPath = utils.getPythonPath(this.workspace);
         if (runAsShell) {
             return this.runShell(pythonPath, args, cwd);
         }
