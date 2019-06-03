@@ -74,12 +74,10 @@ export class UefiCommands implements vscode.Disposable {
         //utils.showMessage(`Scan complete! Found ${this.projManager.projectCount} projects`);
 
         // TODO: This could run in parallel to the main scan
+        // TODO: Run this whenever python.pythonPath changes?
         if (!await this.isMuEnvironmentInstalled()) {
             logger.info('Project Mu Environment not yet installed');
             await this.installMuEnvironment();
-            if (!await this.isMuEnvironmentInstalled()) {
-                logger.error('Could not install the Mu Environment!\nCheck your pip/python');
-            }
         }
     }
 
@@ -126,35 +124,58 @@ export class UefiCommands implements vscode.Disposable {
         await this.tasks.runUpdateTask();
     }
 
+    /**
+     * Determine whether a MU environment is available
+     * 
+     * @returns true if MU is installed
+     */
     async isMuEnvironmentInstalled() : Promise<boolean> {
         // Try to import the Mu pip package to see if it is installed
         try {
             await execPython(this.workspace, 'from MuEnvironment import CommonBuildEntry');
-            logger.info('Mu environment is installed');
+            logger.info('MuEnvironment is available in the current python installation');
             return true;
         } catch {
-            logger.info('Mu environment is NOT installed');
+            logger.info('MuEnvironment is NOT available in the current python installation - failed to import MuEnvironment python package');
             return false;
         }
     }
 
+    /**
+     * Install the MU build environment python packages
+     */
     async installMuEnvironment() {
-        const task_label = 'Install MU';
-        const pip_requirements: string = this.workspace.uri.fsPath + '/pip_requirements.txt';
-        if (await utils.promisifyExists(pip_requirements)) {
+        try {
+            const task_label = 'Install MU';
+            const pip_requirements: string = this.workspace.uri.fsPath + '/pip_requirements.txt';
+            let pip_requirements_valid = false;
+            if (await utils.promisifyExists(pip_requirements)) {
 
-            // Validate that pip_requirements.txt contains the required dependencies
-            let reqs: string = await utils.promisifyReadFile(pip_requirements);
-            if (reqs.includes('mu-build') && reqs.includes('mu-environment')) {
-                await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "-r", "pip_requirements.txt"], task_label);
-                return;
+                // Validate that pip_requirements.txt contains the required dependencies
+                let reqs: string = await utils.promisifyReadFile(pip_requirements);
+                if (reqs.includes('mu-build') && reqs.includes('mu-environment')) {
+                    pip_requirements_valid = true;
+                }
+                else {
+                    utils.showWarning('pip_requirements.txt does not include mu-build & mu-environment. Will install latest available packages');
+                }
             }
-            else {
-                utils.showWarning('pip_requirements.txt does not include mu-build & mu-environment. Will install latest available packages');
+
+            if (pip_requirements_valid) {
+                await this.tasks.runPythonTask(["-m", "pip", "install", "--upgrade", "-r", "pip_requirements.txt"], task_label);
+            } else {
+                // No pip_requirements.txt available, install the latest packages...
+                await this.tasks.runPythonTask(["-m", "pip", "install", "--upgrade", "mu-build", "mu-environment", "mu-python-library"], task_label);
             }
         }
+        catch (e) {
+            utils.showError('Failed to install MU environment. Check task output');
+            return;
+        }
 
-        // No pip_requirements.txt available, install the latest packages...
-        await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "mu-build", "mu-environment", "mu-python-library"], task_label);
+        // Validate that MU is actually installed
+        if (!await this.isMuEnvironmentInstalled()) {
+            utils.showError('Failed to install MU environment - Check your python installation!');
+        }
     }
 }
