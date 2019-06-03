@@ -1,4 +1,5 @@
 'use strict';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import * as utils from './utilities';
 import { logger } from './logger';
@@ -30,6 +31,8 @@ interface UefiTaskDefinition extends vscode.TaskDefinition {
     This makes two types of build task available:
         uefi-corebuild.build  (Invokes 'PlatformBuild.py' for the current project)
         uefi-corebuild.update (Invokes 'PlatformBuild.py --UPDATE' for the current project)
+
+    This also provides a way to run abitrary commands using the task framework.
 */
 export class UefiTasks implements vscode.Disposable {
     workspace: vscode.WorkspaceFolder;
@@ -78,7 +81,7 @@ export class UefiTasks implements vscode.Disposable {
         // TODO
     }
 
-    getTasks(): vscode.Task[] { 
+    public getTasks(): vscode.Task[] { 
         let buildTasks: vscode.Task[] = [];
 
         // Generate a uefi-corebuild.build task for each known config/profile (eg. 'DEV', 'RELEASE')
@@ -189,4 +192,72 @@ export class UefiTasks implements vscode.Disposable {
             return this.runTask(this.update_task);
         }
     }
+
+    /**
+     * Run a command as a temporary task and wait for it to complete
+     * 
+     * @param exec The process to execute within the task
+     * @param args Arguments to pass to the process. 
+     * @param name The task name to show in the UI
+     * @param cwd  The current working directory for the process
+     * @returns    The process exit code
+     */
+    public async runCommandAsTask(exec: string, args: string[], name: string = null, cwd: string = null) : Promise<number> {
+        if (!name) { 
+            name = path.basename(exec);
+        }
+
+        // Create a temporary task
+        const task_type = 'uefi-temptask';
+        let task_exec = new vscode.ProcessExecution(exec, args, { cwd: cwd });
+        let task = new vscode.Task({ type: task_type }, name, 'UEFI', task_exec);
+
+        // Create a temporary task provider
+        let taskProvider = vscode.tasks.registerTaskProvider(task_type, {
+            provideTasks: () => {
+                return [task];
+            },
+            resolveTask(_task: vscode.Task) { return undefined; }
+        });
+
+        // Create a promise that completes when the task has ended
+        let promise = new Promise<number>((resolve, reject) => {
+            let evtHandler = vscode.tasks.onDidEndTaskProcess((e) => {
+                if (e.execution.task == task) {
+                    evtHandler.dispose();
+                    resolve(e.exitCode);
+                }
+            });
+        });
+
+        // Execute
+        try {
+            await vscode.tasks.executeTask(task);
+        } finally {
+            // Unregister the task provider so the user can't invoke it
+            taskProvider.dispose();
+        }
+
+        // Wait for task completion
+        return promise;
+    }
+    
+    /**
+     * Run python.exe as a task, using the currently configured interpreter (python.pythonPath)
+     * Waits until the task completes, and throws an exception if the exit code is not 0.
+     * 
+     * @param args      Arguments to pass to python.exe
+     * @param label     The task label
+     * @param cwd       The current working directory
+     */
+    public async runPythonTask(args: string[], label: string = null, cwd: string = null) {
+        let pythonPath = utils.getPythonPath(this.workspace);
+
+        let exitCode = await this.runCommandAsTask(pythonPath, args, label, cwd);
+        if (exitCode != 0) {
+            logger.error(`Failed to execute: python ${args} (exit:${exitCode})`);
+            throw Error('Failed to execute python command');
+        }
+    }
+
 }
