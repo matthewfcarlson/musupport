@@ -35,6 +35,8 @@ export class UefiTasks implements vscode.Disposable {
     workspace: vscode.WorkspaceFolder;
     projManager: ProjectManager;
 
+    private update_task: vscode.Task;
+
     constructor(workspace: vscode.WorkspaceFolder, projManager: ProjectManager) {
         this.workspace = workspace;
         this.projManager = projManager;
@@ -63,6 +65,9 @@ export class UefiTasks implements vscode.Disposable {
         });
 
         logger.info(`Task Provider Registered (${UEFI_BUILD_PROVIDER})`);
+
+        // Generate a uefi-corebuild.update task
+        this.update_task = this.createUpdateTask('Update');
     }
 
     unregister() {
@@ -92,22 +97,40 @@ export class UefiTasks implements vscode.Disposable {
             }
         }
 
-        // Generate a uefi-corebuild.update task
-        buildTasks.push(this.createUpdateTask('Update'));
+        buildTasks.push(this.update_task);
         
         return buildTasks;
     }
 
-    async runTask(name: string, type: string = 'uefi-corebuild') {
+    public async runTaskByName(name: string, type: string = 'uefi-corebuild') {
         let tasks = await vscode.tasks.fetchTasks({type: type});
         if (tasks) {
             let task = tasks.find((v,i,o) => { return (v.name === name); });
             if (task) {
-                vscode.tasks.executeTask(task);
-                return;
+                return this.runTask(task);
             }
         }
         throw new Error('Could not find task');
+    }
+
+    public async runTask(task: vscode.Task) {
+         // Create a promise that completes when the task has ended
+         let promise = new Promise<number>((resolve, reject) => {
+            let evtHandler = vscode.tasks.onDidEndTaskProcess((e) => {
+                if (e.execution.task == task) {
+                    evtHandler.dispose();
+                    resolve(e.exitCode);
+                }
+            });
+            // TODO: If task doesn't run a process, this will break.
+        });
+
+        await vscode.tasks.executeTask(task);
+        let exitCode = await promise;
+        if (exitCode != 0) {
+            logger.error(`Failed to run task (exit:${exitCode})`);
+            throw Error('Task failed');
+        }
     }
 
 
@@ -159,5 +182,11 @@ export class UefiTasks implements vscode.Disposable {
 
         task.group = vscode.TaskGroup.Build;
         return task;
+    }
+
+    public async runUpdateTask() {
+        if (this.update_task) {
+            return this.runTask(this.update_task);
+        }
     }
 }

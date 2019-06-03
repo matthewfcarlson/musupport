@@ -17,6 +17,10 @@ import { CppConfigurationProvider } from './cpp/cpp_provider';
 
 let main: MainClass = undefined;
 
+/**
+ * The MainClass keeps track of all state for a specific workspace
+ * (ie, one MainClass per workspace)
+ */
 export class MainClass implements vscode.Disposable {
     disposables: vscode.Disposable[] = [];
     context:     vscode.ExtensionContext;
@@ -40,7 +44,7 @@ export class MainClass implements vscode.Disposable {
         this.repoScanner  = new RepoScanner(this.workspace);
         this.projManager  = new ProjectManager(this.repoScanner);
         this.tasks        = new UefiTasks(this.workspace, this.projManager);
-        this.commands     = new UefiCommands(this.workspace, this.projManager, this.repoScanner, this.terminal);
+        this.commands     = new UefiCommands(this.workspace, this.projManager, this.repoScanner, this.tasks, this.terminal);
         this.cppProvider  = new CppConfigurationProvider(context, this.workspace);
 
         this.disposables.push(
@@ -129,8 +133,8 @@ export async function activate(context: vscode.ExtensionContext) {
         await main.activate();
         await main.setup();
 
-        vscode.workspace.onDidChangeConfiguration((e) => {
-            main.setup(); // TODO: await?
+        vscode.workspace.onDidChangeConfiguration(async (e) => {
+            await main.setup();
         });
 
     } else {

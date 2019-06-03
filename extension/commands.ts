@@ -6,6 +6,7 @@ import { UefiTerminal } from './terminal';
 import { RepoScanner } from './reposcanner';
 import { logger } from './logger';
 import { execPython } from './exec';
+import { UefiTasks } from './tasks';
 
 /*
     The UefiCommands class is responsible for providing / handling commands (eg. invokable through Ctrl+Shift+P)
@@ -19,17 +20,20 @@ export class UefiCommands implements vscode.Disposable {
     private workspace: vscode.WorkspaceFolder;
     private projManager: ProjectManager;
     private repoScanner: RepoScanner;
+    private tasks: UefiTasks;
     private term: UefiTerminal;
 
     constructor(
         workspace: vscode.WorkspaceFolder,
         projManager: ProjectManager,
         repoScanner: RepoScanner,
+        tasks: UefiTasks,
         term: UefiTerminal
     ) {
         this.workspace = workspace;
         this.projManager = projManager;
         this.repoScanner = repoScanner;
+        this.tasks = tasks;
         this.term = term;
     }
 
@@ -118,15 +122,8 @@ export class UefiCommands implements vscode.Disposable {
             return;
         }
 
-        /*const config = vscode.workspace.getConfiguration();
-        let buildScriptPath : string = config.get('musupport.currentPlatformBuildScriptPath');
-        if (!buildScriptPath) {
-            utils.showError('No project selected!');
-            return;
-        }*/
-
-        await this.term.runPythonCommand([proj.platformBuildScriptPath, "--update"]);
-        // TODO: Catch errors
+        // Just execute the existing update task
+        await this.tasks.runUpdateTask();
     }
 
     async isMuEnvironmentInstalled() : Promise<boolean> {
@@ -142,13 +139,14 @@ export class UefiCommands implements vscode.Disposable {
     }
 
     async installMuEnvironment() {
+        const task_label = 'Install MU';
         const pip_requirements: string = this.workspace.uri.fsPath + '/pip_requirements.txt';
         if (await utils.promisifyExists(pip_requirements)) {
 
             // Validate that pip_requirements.txt contains the required dependencies
             let reqs: string = await utils.promisifyReadFile(pip_requirements);
             if (reqs.includes('mu-build') && reqs.includes('mu-environment')) {
-                await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "-r", "pip_requirements.txt"]);
+                await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "-r", "pip_requirements.txt"], task_label);
                 return;
             }
             else {
@@ -157,6 +155,6 @@ export class UefiCommands implements vscode.Disposable {
         }
 
         // No pip_requirements.txt available, install the latest packages...
-        await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "mu-build", "mu-environment", "mu-python-library"]);
+        await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "mu-build", "mu-environment", "mu-python-library"], task_label);
     }
 }
