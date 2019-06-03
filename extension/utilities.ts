@@ -249,7 +249,7 @@ export function showMessage(message: string) {
 
 export function showWarning(message: string) {
 	logger.warn(message);
-	return vscode.window.showWarningMessage('MU: ' + message);
+	return vscode.window.showWarningMessage('MU: WARNING: ' + message);
 }
 
 export function showError(message: string) {
