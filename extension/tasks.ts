@@ -84,23 +84,25 @@ export class UefiTasks implements vscode.Disposable {
     public getTasks(): vscode.Task[] { 
         let buildTasks: vscode.Task[] = [];
 
+        buildTasks.push(this.update_task);
+
         // Generate a uefi-corebuild.build task for each known config/profile (eg. 'DEV', 'RELEASE')
         let configs = this.projManager.getAvailableConfigs();
         let currProj = this.projManager.getCurrentProject();
-        if (!currProj) {
-            utils.showError('No project selected - cannot build');
-            return null;
-        }
+        if (currProj) {
+            logger.info(`Generate build tasks for project ${currProj.projectName} (configs: ${configs})`);
 
-        logger.info(`Generate build tasks for project ${currProj.projectName} (configs: ${configs})`);
-
-        if (configs) {
-            for (var conf of configs) {
-                buildTasks.push(this.createBuildTask(`Build ${conf}`, conf));
+            if (configs) {
+                for (var conf of configs) {
+                    buildTasks.push(this.createBuildTask(`Build ${conf}`, conf));
+                }
+            } else {
+                logger.warn('No build tasks generated for the current project');
             }
         }
-
-        buildTasks.push(this.update_task);
+        else {
+            logger.warn('No build tasks generated because project not selected');
+        }
         
         return buildTasks;
     }

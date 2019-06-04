@@ -54,7 +54,7 @@ export async function execPython(workspace: vscode.WorkspaceFolder, expression: 
 				if (code === 0) {
 					resolve(stdout);
 				} else {
-					reject(`exit code=${code}: ${stderr}`);
+					reject(`exitcode=${code}: ${stderr}`);
 				}
 			});
 
@@ -65,7 +65,7 @@ export async function execPython(workspace: vscode.WorkspaceFolder, expression: 
 
 		return await promise;
 	} catch (e) {
-		logger.error('Failed to execute python statement:', e);
+		logger.error(`Failed to execute python expression: ${expression}\n${e}`);
 		throw e;
 	}
 }
