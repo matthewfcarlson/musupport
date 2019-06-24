@@ -17,10 +17,6 @@ export function getIsWindows(): boolean {
   return nodePlatform === 'win32';
 }
 
-export function containsMuProjects(path: string): boolean {
-  console.log("Utilities- checking in " + path + " is a mu enabled project")
-  return true;
-}
 export function delay(milliseconds: number): Promise<void> {
   return new Promise<void>(resolve => {
     setTimeout(() => {

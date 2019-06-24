@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { logger } from '../logger';
-import { containsMuProjects, promisifyReadDir, promisifyExists, promisifyGlob, promisifyIsDir, promisifyReadFile } from '../utilities';
+import { promisifyReadDir, promisifyExists, promisifyGlob, promisifyIsDir, promisifyReadFile } from '../utilities';
 
 import * as makefile_parser from './parsers/makefile_parser';
 import { match } from 'minimatch';
@@ -50,40 +50,40 @@ export class CppProcessor {
         this.infStore = new InfStore(workspace);
         this.decStore = new DecStore(workspace);
         const fsPath = workspace.uri.fsPath;
-        this.active = containsMuProjects(fsPath);
+        this.active = true;
         this.buildWatchers = [];
         this.buildRelativePatterns = [];
 
 
-        this.setupWatchers();
+        //this.setupWatchers();
         //this.RunPlatformPackageRefresh();
     }
 
-    private setupWatchers(): void {
-        const fsPath = this.workspace.uri.fsPath;
-        const buildRelativePattern = new vscode.RelativePattern(path.join(fsPath, 'Build'), "BUILDLOG*");
-        const buildWatcher = vscode.workspace.createFileSystemWatcher(buildRelativePattern)
-        buildWatcher.onDidChange(this.buildChanged, this, this.disposables);
-        this.buildRelativePatterns.push(buildRelativePattern);
-        this.buildWatchers.push(buildWatcher);
+    // private setupWatchers(): void {
+    //     const fsPath = this.workspace.uri.fsPath;
+    //     const buildRelativePattern = new vscode.RelativePattern(path.join(fsPath, 'Build'), "BUILDLOG*");
+    //     const buildWatcher = vscode.workspace.createFileSystemWatcher(buildRelativePattern)
+    //     buildWatcher.onDidChange(this.buildChanged, this, this.disposables);
+    //     this.buildRelativePatterns.push(buildRelativePattern);
+    //     this.buildWatchers.push(buildWatcher);
 
-        const buildRelativePattern2 = new vscode.RelativePattern(path.join(fsPath, 'Build'), "**/*{.dsc,.h,AutoGen}");
-        const buildWatcher2 = vscode.workspace.createFileSystemWatcher(buildRelativePattern2);
-        this.buildRelativePatterns.push(buildRelativePattern2);
-        this.buildWatchers.push(buildWatcher2);
-        buildWatcher2.onDidChange(this.buildChanged, this, this.disposables);
+    //     const buildRelativePattern2 = new vscode.RelativePattern(path.join(fsPath, 'Build'), "**/*{.dsc,.h,AutoGen}");
+    //     const buildWatcher2 = vscode.workspace.createFileSystemWatcher(buildRelativePattern2);
+    //     this.buildRelativePatterns.push(buildRelativePattern2);
+    //     this.buildWatchers.push(buildWatcher2);
+    //     buildWatcher2.onDidChange(this.buildChanged, this, this.disposables);
 
-        vscode.workspace.onDidChangeWorkspaceFolders(events => {
-            events.added.forEach(async folder => {
-                if (containsMuProjects(folder.uri.fsPath)) {
-                    CCppProperties.writeDefaultCCppPropertiesJsonIfNotExist(folder.uri);
+    //     vscode.workspace.onDidChangeWorkspaceFolders(events => {
+    //         events.added.forEach(async folder => {
+    //             if (containsMuProjects(folder.uri.fsPath)) {
+    //                 CCppProperties.writeDefaultCCppPropertiesJsonIfNotExist(folder.uri);
 
-                    //startFloatingPromise(() => this.nMakeJsonRpcServer.initializeWorkspaceFolder(folder.uri, this.workspaceIndexingMode), "Each folder can initialize independently");
-                }
-            });
-        });
+    //                 //startFloatingPromise(() => this.nMakeJsonRpcServer.initializeWorkspaceFolder(folder.uri, this.workspaceIndexingMode), "Each folder can initialize independently");
+    //             }
+    //         });
+    //     });
 
-    }
+    // }
 
     public HasConfigForFile(uri: vscode.Uri): boolean {
         return this.infStore.HasInfForFile(uri);
