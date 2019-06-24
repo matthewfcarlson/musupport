@@ -58,9 +58,15 @@ export class MainClass implements vscode.Disposable {
 
         // Event handlers
         this.disposables.push(this.repoScanner.onProjectDiscovered((p) => {
-
         }));
+
         this.disposables.push(this.projManager.onProjectSelected((p) => {
+            // Activate the C/C++ provider if it hasn't already been activated
+            if (!this.cppProvider.isEnabled) {
+                this.cppProvider.register();
+            }
+            
+            // Update the C/C++ provider with the current project's search paths
             this.cppProvider.setActiveProject(p);
         }));
     }
@@ -76,11 +82,6 @@ export class MainClass implements vscode.Disposable {
             this.tasks.register();
             this.projManager.register();
             //this.cppProvider.register();
-
-            // Begin a workspace scan (can also be invoked through a VSCode command)
-            this.commands.executeCommand('musupport.scan');
-
-            logger.info('Extension ready!');
         }
         catch (err) {
             logger.error('Error activating extension', err);
@@ -89,28 +90,34 @@ export class MainClass implements vscode.Disposable {
 
     /**
      * Called on extension activation and whenever the configuration changes.
-     * Use this to re-fresh things that depend on the current config.
+     * Use this to refresh things that depend on the current config.
      */
     async setup() {
         logger.info("MAIN - SETTING UP CONTEXT");
         const config = vscode.workspace.getConfiguration("musupport");
 
         try {
-            if (config["useAsCppProvider"]) {
-                this.cppProvider.register();
-                let curProj = this.projManager.getCurrentProject();
-                if (curProj) {
-                    this.cppProvider.setActiveProject(curProj);
-                }
-            } else {
-                this.cppProvider.unregister();
-            }
-
             // Locate the current python interpreter
             await utils.validatePythonPath(this.workspace);
+
+            if (config.get('enableRepoScanner', true)) {
+                // Begin a workspace scan (can also be invoked through a VSCode command)
+                await this.commands.executeCommand('musupport.scan');
+            }
+
+            // if (config.get("useAsCppProvider", true)) {
+            //     this.cppProvider.register();
+            //     let curProj = this.projManager.getCurrentProject();
+            //     if (curProj) {
+            //         this.cppProvider.setActiveProject(curProj);
+            //     }
+            // } else {
+            //     this.cppProvider.unregister();
+            // }
         }
         catch (err) {
           logger.error("Error setting up extension", err)
+          return;
         }
     }
 

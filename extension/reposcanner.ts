@@ -16,6 +16,10 @@ export class RepoScanner implements vscode.Disposable {
     private readonly _onProjectDiscovered: vscode.EventEmitter<ProjectDefinition> = new vscode.EventEmitter<ProjectDefinition>();
     public  readonly  onProjectDiscovered: vscode.Event<ProjectDefinition>        = this._onProjectDiscovered.event;
 
+    // true if at least one project was found and can be managed by the extension.
+    // If false, the extension will only provide basic functionality (such as syntax hilighting)
+    private isActive: boolean = false;
+
     constructor(workspace: vscode.WorkspaceFolder) {
         this.workspace = workspace;
     }
@@ -46,8 +50,13 @@ export class RepoScanner implements vscode.Disposable {
         // Create a project definition for each DSC file
         var promises = platformDscFiles
             .map((f) => this.createProjectDefFromDsc(f));
-        return (await Promise.all(promises))
+        let projects = (await Promise.all(promises))
             .filter((def) => (def)); // Remove null entries
+
+        // If we can find at least one project, this is a MU repository.
+        this.isActive = (projects) ? true : false;
+
+        return projects;
     }
 
     /**

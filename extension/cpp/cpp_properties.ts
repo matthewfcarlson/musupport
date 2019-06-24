@@ -5,6 +5,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as utils from '../utilities';
 
 /**
  * Represents the contents of c_cpp_properties.json
@@ -79,16 +80,16 @@ export class CCppProperties {
      * The default c_cpp_properties configuration
      */
     private static readonly defaultConfiguration: Configuration = {
-        name: "Win32",
+        name: "UEFI",
         compilerPath: "", // Set to empty string so we don't pick up default Visual Studio installed headers
         includePath: [], // Set to empty to override default includes
         defines: [], // Set to empty to override default defines
         browse: {
             path: [], // Set this to empty so the tag parser won't try to hydrate the workspace
-            limitSymbolsToIncludedHeaders: true,
+            limitSymbolsToIncludedHeaders: true, // This keeps the intellisense scope limited to just the files that are relevant
             databaseFilename: "${workspaceFolder}/.vscode/" // Store database files in .vscode folder
         },
-        configurationProvider: "microsoft.vscode-nmake-tools" // Specify this extension as teh config provider, so users won't be prompted to allow this
+        configurationProvider: utils.extension.id // Specify this extension as the config provider, so users won't be prompted to allow this
     };
 
     /**

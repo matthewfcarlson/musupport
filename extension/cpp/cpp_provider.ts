@@ -5,6 +5,7 @@ import { logger } from '../logger';
 import * as utils from '../utilities';
 import { ProjectDefinition } from '../projectmanager';
 import { CppProcessor } from './cpp_processor';
+import { CCppProperties } from './cpp_properties';
 
 export class CppConfigurationProvider implements CustomConfigurationProvider, vscode.Disposable {
     get name()        { return utils.extension.packageJSON.description; }
@@ -18,6 +19,11 @@ export class CppConfigurationProvider implements CustomConfigurationProvider, vs
     private cppapi: CppToolsApi = null;
     private processor: CppProcessor;
     private enabled: boolean = false;
+
+    private defaultBrowseConfig: WorkspaceBrowseConfiguration = {
+        standard: 'c11',
+        browsePath: ["${workspaceFolder}\\**"]
+    };
 
     constructor(context: vscode.ExtensionContext, workspace: vscode.WorkspaceFolder) {
         this.context = context;
@@ -33,8 +39,6 @@ export class CppConfigurationProvider implements CustomConfigurationProvider, vs
      * Register the C/C++ configuration provider with a specific workspace
      */
     public async register() {
-        logger.info('Register C/C++ configuration provider');
-
         this.cppapi = await getCppToolsApi(Version.v2);
         if (!this.cppapi) {
             utils.showError("Could not connect to C/C++ extension (ms-vscode.cpptools)");
@@ -42,6 +46,9 @@ export class CppConfigurationProvider implements CustomConfigurationProvider, vs
         }
         this.disposables.push(this.cppapi);
         //context.subscriptions.push(this); // ??
+
+        // Write c_cpp_properties.json if not yet present
+        CCppProperties.writeDefaultCCppPropertiesJsonIfNotExist(this.workspace.uri);
 
         // Register our custom configuration provider
         this.cppapi.registerCustomConfigurationProvider(this);
@@ -52,14 +59,14 @@ export class CppConfigurationProvider implements CustomConfigurationProvider, vs
         // Listen to configuration changes
         //this.disposables.push(main.config.ConfigurationChanged((cfg) => this.updateConfiguration()));
 
-        this.activeProject = null;
         this.processor = new CppProcessor(this.workspace);
         this.enabled = true;
+
+        logger.info('MU C/C++ configuration provider registered');
     }
 
     /**
      * Unregister the C/C++ configuration provider
-     * TODO: Need to tell the cppapi that this object is no longer valid?
      */
     public unregister() {
         this.enabled = false;
@@ -71,49 +78,64 @@ export class CppConfigurationProvider implements CustomConfigurationProvider, vs
     public setActiveProject(project: ProjectDefinition) {
         if (project) {
             this.activeProject = project;
+            // TODO: Scan the current project's INFs/DCs.
             this.cppapi.didChangeCustomConfiguration(this);
         }
     }
 
     public async canProvideBrowseConfiguration(_?: vscode.CancellationToken | undefined): Promise<boolean> {
-        if (!this.enabled || !this.activeProject) return false;
-        if (this.processor.IsActive() == false) return false;
+        if (!this.enabled) {
+            logger.warn('CPP_PROVIDER: Not activated');
+            return false;
+        }
+        if (!this.activeProject) {
+            logger.warn('CPP_PROVIDER: No project selected');
+            return false;
+        }
         return true;
-      }
-    
-    
-      public async provideBrowseConfiguration(_?: vscode.CancellationToken | undefined): Promise<WorkspaceBrowseConfiguration> {
-        //TODO: figure out if we are a Mu project or not?
-        const config: WorkspaceBrowseConfiguration = {
-          browsePath: ["${workspaceFolder}\\**"],
-          standard: 'c11',
-        };
-        return config;
-      }
-    
-      public async canProvideConfiguration(uri: vscode.Uri, cancel: vscode.CancellationToken | undefined): Promise<boolean> {
-        if (!this.enabled || !this.activeProject) return false;
+    }
+
+    public async provideBrowseConfiguration(_?: vscode.CancellationToken | undefined): Promise<WorkspaceBrowseConfiguration> {
+        return Promise.resolve(this.defaultBrowseConfig);
+    }
+  
+    public async canProvideConfiguration(uri: vscode.Uri, cancel: vscode.CancellationToken | undefined): Promise<boolean> {
+        logger.info("CPP_PROVIDER: Checking if we can provide configuration for ", uri.fsPath);
+
+        if (!this.enabled) {
+            logger.warn('CPP_PROVIDER: Not activated');
+            return false;
+        }
+        if (!this.activeProject) {
+            logger.warn('CPP_PROVIDER: No project selected');
+            return false;
+        }
 
         const fileWp = vscode.workspace.getWorkspaceFolder(uri);
         if (fileWp === undefined || fileWp.index !== this.workspace.index) {
-          return false;
+            logger.warn('CPP_PROVIDER: File not in workspace');
+            return false;
         }
 
-        logger.info("CPP_PROVIDER checking if we can provide configuration for ", uri)
-    
         //what to do when we can't provide this configurations
-        if (this.processor.HasConfigForFile(uri)) return true;
-        return false;
-      }
+        if (!this.processor.HasConfigForFile(uri)) {
+            logger.warn('CPP_PROVIDER: Config not available');
+            return false
+        }
+        return true;
+    }
 
-      public async provideConfigurations(uris: vscode.Uri[], _: vscode.CancellationToken | undefined): Promise<SourceFileConfigurationItem[]> {
+    public async provideConfigurations(uris: vscode.Uri[], _: vscode.CancellationToken | undefined): Promise<SourceFileConfigurationItem[]> {
         const ret: SourceFileConfigurationItem[] = [];
         const basePath = this.workspace.uri.fsPath;
         for (const uri of uris) {
-          const data = this.processor.GetConfigForFile(uri);
-          ret.push(data);
+            const data = this.processor.GetConfigForFile(uri);
+            ret.push(data);
         }
         return ret;
-    
-      }
+    }
+
+    public get isEnabled() : boolean {
+        return this.enabled;
+    }
 }
