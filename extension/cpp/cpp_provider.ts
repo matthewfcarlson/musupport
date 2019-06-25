@@ -8,7 +8,7 @@ import { CppProcessor } from './cpp_processor';
 import { CCppProperties } from './cpp_properties';
 
 export class CppConfigurationProvider implements CustomConfigurationProvider, vscode.Disposable {
-    get name()        { return utils.extension.packageJSON.description; }
+    get name()        { return utils.extension.packageJSON.displayName; }
     get extensionId() { return utils.extension.id; }
 
     private context: vscode.ExtensionContext;
