@@ -42,9 +42,13 @@ export class UefiTasks implements vscode.Disposable {
 
         vscode.tasks.onDidStartTask(async (e) => {
             //let all_tasks = await vscode.tasks.fetchTasks();
-            //let task = e.execution.task;
-            return;
+            let task = e.execution.task;
+            logger.info(`Task ${task.name} started`);
         });
+        vscode.tasks.onDidEndTask(async (e) => {
+            let task = e.execution.task;
+            logger.info(`Task ${task.name} finished`);
+        })
 
         vscode.tasks.registerTaskProvider(UEFI_BUILD_PROVIDER, {
             provideTasks: () => {
@@ -74,7 +78,7 @@ export class UefiTasks implements vscode.Disposable {
         let configs = this.projManager.getAvailableConfigs();
         let currProj = this.projManager.getCurrentProject();
         if (!currProj) {
-            logger.error('No project selected - cannot generate build tasks');
+            utils.showError('No project selected - cannot build');
             return null;
         }
 

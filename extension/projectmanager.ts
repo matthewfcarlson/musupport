@@ -2,24 +2,25 @@ import * as vscode from 'vscode';
 import { RepoScanner } from './reposcanner';
 import * as exec from './exec';
 import { logger } from './logger';
+import * as utils from './utilities';
 
 export class ProjectDefinition {
+    // Display name for the project
+    projectName: string;
+
     // The directory containing the platform
     projectRoot: string;
 
-    // The PlatformBuild.py script to invoke when building
-    platformBuildScriptPath: string;
-
     // The Platform DSC file
     platformDscPath: string;
+
+    // The PlatformBuild.py script to invoke when building
+    platformBuildScriptPath: string;
 
     // The parsed project DSC file
     //projectDsc: dsc.DscFile; // TODO
 
     buildRoot: string;
-
-    // Display name for the project
-    projectName: string;
 
     // Paths to search for EFI packages
     packageSearchPaths: string[];
@@ -75,7 +76,7 @@ export class ProjectManager implements vscode.Disposable {
         // TODO: Should we use the project name or path as the key?
         // There may be duplicate project names...
         if (this.availableProjects.some((p) => p.projectName === proj.projectName)) {
-            console.info(`Project ${proj.projectName} already discovered`);
+            logger.info(`Project ${proj.projectName} already discovered`);
             return;
         }
 
@@ -114,7 +115,7 @@ export class ProjectManager implements vscode.Disposable {
                 return this.selectProject();
             }
             else {
-                vscode.window.showErrorMessage('No projects detected in the UEFI workspace');
+                utils.showError('No UEFI projects detected in the workspace');
             }
         });
 
@@ -135,11 +136,19 @@ export class ProjectManager implements vscode.Disposable {
 
     async selectProject(projectName: string = undefined): Promise<string|null> {
         if (!projectName) {
-            projectName = await vscode.window.showQuickPick(this.availableProjects.map(proj => proj.projectName));
-            if (!projectName) {
+            // Display a drop-down picker
+            let items: vscode.QuickPickItem[] = this.availableProjects.map(proj => { return {
+                label:  proj.projectName,
+                // Show either the PlatformBuild.py path or the PlatformPkg.dsc path
+                detail: (proj.platformBuildScriptPath || proj.platformDscPath), 
+            }});
+            let selectedItem = await vscode.window.showQuickPick(items);
+            if (!selectedItem || !selectedItem.label) {
                 // Selection cancelled
                 return null;
             }
+
+            projectName = selectedItem.label;
         }
 
         if (projectName) {

@@ -81,9 +81,14 @@ export class UefiCommands implements vscode.Disposable {
             location: vscode.ProgressLocation.Window,
             title: 'Scanning for UEFI projects...'
         }, async (p, t) => {
-            // TODO
             let projects = await this.repoScanner.scanForProjects();
-            logger.info('Discovered projects: ', projects.length);
+            if (projects && projects.length > 0) {
+                logger.info(`Discovered ${projects.length} projects`);
+            } else {
+                const config = vscode.workspace.getConfiguration(null, null);
+                let platformDsc: string = config.get('musupport.platformDsc');
+                utils.showWarning(`No projects found in the current workspace (Looking for '${platformDsc}')`);
+            }
         });
     }
 
@@ -99,24 +104,24 @@ export class UefiCommands implements vscode.Disposable {
 
     async updateRepository() {
         if (!this.projManager) {
-            logger.error("UEFI extension hasn't finished loading!");
+            utils.showError("UEFI extension hasn't finished loading!");
             return;
         }
 
         let proj = this.projManager.getCurrentProject();
         if (!proj) {
-            logger.error("No project selected!");
+            utils.showError("No project selected!");
             return;
         }
 
-        const config = vscode.workspace.getConfiguration();
+        /*const config = vscode.workspace.getConfiguration();
         let buildScriptPath : string = config.get('musupport.currentPlatformBuildScriptPath');
         if (!buildScriptPath) {
-            logger.error('No project selected!');
+            utils.showError('No project selected!');
             return;
-        }
+        }*/
 
-        await this.term.runPythonCommand([buildScriptPath, "--update"]);
+        await this.term.runPythonCommand([proj.platformBuildScriptPath, "--update"]);
         // TODO: Catch errors
     }
 
