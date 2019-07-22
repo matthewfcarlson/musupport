@@ -128,6 +128,68 @@
                 }
             }
         ],
+        "problemMatchers": [
+            {
+                "name": "mu-build",
+                "label": "MuBuild Errors",
+                "owner": "cpp",
+                "fileLocation": ["absolute"],
+                "pattern": [
+                    {
+                        "kind": "file",
+                        "regexp": "^INFO -  : (error) (F\\d+): (.+)$",
+                        "severity": 1,
+                        "message": 2,
+                        "code": 3
+                    },
+                    {
+                        "kind": "file",
+                        "regexp": "^INFO -  (.+) (?:\\[.+\\])?$",
+                        "file": 1
+                    }
+                ]
+            },
+            {
+                "name": "mu-build-linker",
+                "label": "MuBuild Linker Errors",
+                "owner": "cpp",
+                "fileLocation": ["absolute"],
+                "pattern": {
+                    "kind": "file",
+                    "regexp": "^(?:ERROR|WARNING) - Linker: (?:Error|Warning): ([^(]+).+ : (error|warning) (.*)$",
+                    "file": 1,
+                    "severity": 2,
+                    "message": 3
+                }
+            },
+            {
+                "name": "mu-build-compile",
+                "label": "MuBuild Compiler Errors",
+                "owner": "cpp",
+                "fileLocation": ["absolute"],
+                "pattern": {
+                    "regexp": "^(?:ERROR|WARNING) - Compile: (?:Error|Warning): ([^(]+)\\((\\d+)\\): (error|warning) (\\w+): (.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "code": 4,
+                    "message": 5
+                }
+            },
+            {
+                "name": "mu-build-binoutput",
+                "label": "MuBuild Binary Output",
+                "owner": "cpp",
+                "fileLocation": ["absolute"],
+                "pattern": {
+                    "kind": "file",
+                    "regexp": "^(INFO) - (Full Flash image written to (.*))$",
+                    "severity": 1,
+                    "message": 2,
+                    "file": 3
+                }
+            }
+        ],
         "languages": [
             {
                 "id": "dsc",
