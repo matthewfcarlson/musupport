@@ -2,10 +2,9 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-
-export class DepNodeProvider implements vscode.TreeDataProvider<Dependency> {
-    private _onDidChangeTreeData: vscode.EventEmitter<Dependency | undefined> = new vscode.EventEmitter<Dependency | undefined>();
-    readonly onDidChangeTreeData: vscode.Event<Dependency | undefined> = this._onDidChangeTreeData.event;
+export class DepNodeProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined> = new vscode.EventEmitter<vscode.TreeItem | undefined>();
+    readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined> = this._onDidChangeTreeData.event;
     
     constructor(private workspaceRoot: string) { }
 
@@ -13,18 +12,18 @@ export class DepNodeProvider implements vscode.TreeDataProvider<Dependency> {
 		this._onDidChangeTreeData.fire();
 	}
 
-	getTreeItem(element: Dependency): vscode.TreeItem {
+	getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
 		return element;
 	}
 
-	getChildren(element?: Dependency): Thenable<Dependency[]> {
+	getChildren(element?: vscode.TreeItem): Thenable<vscode.TreeItem[]> {
 		if (!this.workspaceRoot) {
 			vscode.window.showInformationMessage('No dependency in empty workspace');
 			return Promise.resolve([]);
         }
         
         return Promise.resolve([
-            new Dependency("Hello", "123", vscode.TreeItemCollapsibleState.Collapsed)
+			new vscode.TreeItem("Hello", vscode.TreeItemCollapsibleState.Collapsed)
         ]);
 
 		// if (element) {
@@ -88,8 +87,8 @@ export class ActivityView implements vscode.Disposable {
 		// vscode.commands.registerCommand('uefiExplorer.refreshEntry', () => treeProvider.refresh());
 
 		// View in Explorer Bar
-        const view = vscode.window.createTreeView('uefiProjects', { 
-            treeDataProvider: treeProvider
-        });
+        // const view = vscode.window.createTreeView('uefiProjects', { 
+        //     treeDataProvider: treeProvider
+        // });
     }
 }

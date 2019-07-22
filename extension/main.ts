@@ -12,6 +12,7 @@ import { ProjectManager } from './projectmanager';
 import { UefiTerminal } from './terminal';
 import { UefiCommands } from './commands';
 import { ActivityView } from './activityview';
+import { ProjectTreeNodeProvider } from './projtree';
 import * as exec from './exec';
 
 let main: MainClass = undefined;
@@ -26,6 +27,7 @@ export class MainClass implements vscode.Disposable {
     terminal:    UefiTerminal;
     commands:    UefiCommands;
     views:       ActivityView;
+    projectTree: ProjectTreeNodeProvider;
 
 
     constructor(context: vscode.ExtensionContext) {
@@ -36,6 +38,7 @@ export class MainClass implements vscode.Disposable {
         this.tasks        = new UefiTasks(this.projManager);
         this.commands     = new UefiCommands(this.projManager, this.repoScanner, this.terminal);
         this.views        = new ActivityView(vscode.workspace.workspaceFolders[0]);
+        this.projectTree  = new ProjectTreeNodeProvider(vscode.workspace.workspaceFolders[0], this.projManager, this.repoScanner);
 
         this.disposables.push(
             this.terminal,
@@ -54,9 +57,12 @@ export class MainClass implements vscode.Disposable {
             this.commands.register(this.context);
             this.tasks.register();
             this.views.register(this.context);
+            this.projectTree.register();
 
             let scanCommand = this.commands.executeCommand('musupport.scan');
             // TODO: On scan completion load or update the C/C++ extension
+
+            this.projectTree.refresh();
 
             logger.info('Extension ready!');
         }
