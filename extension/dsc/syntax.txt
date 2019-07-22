@@ -1,0 +1,443 @@
+<EDK_II_DSC> ::= [<Header>]
+                 <Defines>
+                 [<SkuIds>]
+                 <LibraryClasses>*
+                 <Pcds>*
+                 <Components>+
+                 <BuildOptions>*
+                 <UserExtensions>*
+<Word>                 ::= (a-zA-Z0-9_)(a-zA-Z0-9_-.)*
+<SimpleWord>           ::= (a-zA-Z0-9)(a-zA-Z0-9_-)*
+<ToolWord>             ::= (A-Z)(a-zA-Z0-9)*
+<FileSep>              ::= "/"
+<Extension>            ::= (a-zA-Z0-9_-)+
+<File>                 ::= <Word> ["." <Extension>]
+<PATH>                 ::= [<MACROVAL> <FileSep>] <RelativePath>
+<RelativePath>         ::= <DirName> [<FileSep> <DirName>]*
+<DirName>              ::= {<Word>} {<MACROVAL>}
+<FullFilename>         ::= {<PATH> <FileSep> <File>}
+                           {<MACROVAL> <FileSep> <File>}
+                           {<MACROVAL>}
+<Filename>             ::= {[<PATH> <FileSep>] <File>}
+                           {[<RelativePath> <FileSep>] <File>}
+                           {<MACROVAL>}
+<Chars>                ::= (a-zA-Z0-9_)
+<Digit>                ::= (0-9)
+<NonDigit>             ::= (a-zA-Z_)
+<Identifier>           ::= <NonDigit> <Chars>*
+<CName>                ::= <Identifier>
+<AsciiChars>           ::= (0x21 - 0x7E)
+<CChars>               ::= [{0x21} {(0x23 - 0x26)} {(0x28 - 0x5B)}
+                           {(0x5D - 0x7E)} {<EscapeSequence>}]*
+<DblQuote>             ::= 0x22
+<SglQuote>             ::= 0x27
+<EscapeSequence>       ::= "\" {"n"} {"t"} {"f"} {"r"} {"b"} {"0"} {"\"}
+                           {<DblQuote>} {<SglQuote>}
+<TabSpace>             ::= {<Tab>} {<Space>}
+<TS>                   ::= <TabSpace>*
+<MTS>                  ::= <TabSpace>+
+<Tab>                  ::= 0x09
+<Space>                ::= 0x20
+<CR>                   ::= 0x0D
+<LF>                   ::= 0x0A
+<CRLF>                 ::= <CR> <LF>
+<WhiteSpace>           ::= {<TS>} {<CR>} {<LF>} {<CRLF>}
+<WS>                   ::= <WhiteSpace>*
+<Eq>                   ::= <TS> "=" <TS>
+<FieldSeparator>       ::= "|"
+<FS>                   ::= <TS> <FieldSeparator> <TS>
+<Wildcard>             ::= "*"
+<CommaSpace>           ::= "," <Space>*
+<Cs>                   ::= "," <Space>*
+<AsciiString>          ::= [ <TS>* <AsciiChars>* ]*
+<EmptyString>          ::= <DblQuote><DblQuote>
+<CFlags>               ::= <AsciiString>
+<PrintChars>           ::= {<TS>} {<CChars>}
+<QuotedString>         ::= <DblQuote> <PrintChars>* <DblQuote>
+<SglQuotedString>      ::= <SglQuote> <PrintChars>* <SglQuote>
+<CString>              ::= {<QuotedString>} {<SglQuotedString>}
+<NormalizedString>     ::= <DblQuote> [{<Word>} {<Space>}]+ <DblQuote>
+<GlobalComment>        ::= <WS> "#" [<AsciiString>] <EOL>+
+<Comment>              ::= "#" <AsciiString> <EOL>+
+<UnicodeString>        ::= "L" {<QuotedString>} {<SglQuotedString>}
+<HexDigit>             ::= (a-fA-F0-9)
+<HexByte>              ::= {"0x"} {"0X"} [<HexDigit>] <HexDigit>
+<HexNumber>            ::= {"0x"} {"0X"} <HexDigit>+
+<HexVersion>           ::= "0x" [0]* <Major> <Minor>
+<Major>                ::= <HexDigit>? <HexDigit>? <HexDigit>?
+                           <HexDigit>
+<Minor>                ::= <HexDigit> <HexDigit> <HexDigit> <HexDigit>
+<DecimalVersion>       ::= {"0"} {(1-9) [(0-9)]*} ["." (0-9)+]
+<VersionVal>           ::= {<HexVersion>} {(0-9)+ "." (0-99)}
+<GUID>                 ::= {<RegistryFormatGUID>} {<CFormatGUID>}
+<RegistryFormatGUID>   ::= <RHex8> "-" <RHex4> "-" <RHex4> "-" <RHex4> "-"
+                           <RHex12>
+<RHex4>                ::= <HexDigit> <HexDigit> <HexDigit> <HexDigit>
+<RHex8>                ::= <RHex4> <RHex4>
+<RHex12>               ::= <RHex4> <RHex4> <RHex4>
+<RawH2>                ::= <HexDigit>? <HexDigit>
+<RawH4>                ::= <HexDigit>? <HexDigit>? <HexDigit>? <HexDigit>
+<OptRawH4>             ::= <HexDigit>? <HexDigit>? <HexDigit>? <HexDigit>?
+<Hex2>                 ::= {"0x"} {"0X"} <RawH2>
+<Hex4>                 ::= {"0x"} {"0X"} <RawH4>
+<Hex8>                 ::= {"0x"} {"0X"} <OptRawH4> <RawH4>
+<Hex12>                ::= {"0x"} {"0X"} <OptRawH4> <OptRawH4> <RawH4>
+<Hex16>                ::= {"0x"} {"0X"} <OptRawH4> <OptRawH4> <OptRawH4>
+                           <RawH4>
+<CFormatGUID>          ::= "{" <Hex8> <CommaSpace> <Hex4> <CommaSpace>
+                           <Hex4> <CommaSpace> "{"
+                           <Hex2> <CommaSpace> <Hex2> <CommaSpace>
+                           <Hex2> <CommaSpace> <Hex2> <CommaSpace>
+                           <Hex2> <CommaSpace> <Hex2> <CommaSpace>
+                           <Hex2> <CommaSpace> <Hex2> "}" "}"
+<CArray>               ::= "{" {<NList>} {<CArray>} "}"
+<NList>                ::= <HexByte> [<CommaSpace> <HexByte>]*
+<RawData>              ::= <TS> <HexByte>
+                           [ <Cs> <HexByte> [<EOL> <TS>] ]*
+<Integer>              ::= {(0-9)} {(1-9)(0-9)+}
+<Number>               ::= {<Integer>} {<HexNumber>}
+<HexNz>                ::= (\x1 - \xFFFFFFFFFFFFFFFF)
+<NumNz>                ::= (1-18446744073709551615)
+<GZ>                   ::= {<NumNz>} {<HexNz>}
+<TRUE>                 ::= {"TRUE"} {"true"} {"True"} {"0x1"} {"0x01"} {"1"}
+<FALSE>                ::= {"FALSE"} {"false"} {"False"} {"0x0"} {"0x00"} {"0"}
+<BoolVal>              ::= {<TRUE>} {<FALSE>}
+<BoolType>             ::= {<BoolVal>} {"{"<BoolVal>"}"}
+<MACRO>                ::= (A-Z)(A-Z0-9_)*
+<MACROVAL>             ::= "$(" <MACRO> ")"
+<PcdFieldName>         ::= <TokenSpaceGuidCName> "." <PcdCName> ["["<Number>"]"]* "." <Field>
+<PcdName>              ::= <TokenSpaceGuidCName> "." <PcdCName>
+<PcdCName>             ::= <CName>
+<TokenSpaceGuidCName>  ::= <CName>
+<Field>                ::= <CName>
+<PcdFieldEntry>        ::= <PcdFieldName> <FS> <PcdFieldValue> <EOL>
+<PcdFieldValue>        ::= {<BoolType>} {<NumValUint8>} {<NumValUint16>}
+                           {<NumValUint32>} {<NumValUint64>} {<StringVal>}
+                           {<MACROVAL>} {<Expression>}
+<PCDVAL>               ::= "PCD(" <PcdName> ")"
+<UINT8>                ::= {"0x"} {"0X"} (\x0 - \xFF)
+<UINT16>               ::= {"0x"} {"0X"} (\x0 - \xFFFF)
+<UINT32>               ::= {"0x"} {"0X"} (\x0 - \xFFFFFFFF)
+<UINT64>               ::= {"0x"} {"0X"} (\x0 - \xFFFFFFFFFFFFFFFF)
+<UINT8z>               ::= {"0x"} {"0X"} <HexDigit> <HexDigit>
+<UINT16z>              ::= {"0x"} {"0X"} <HexDigit> <HexDigit> <HexDigit>
+                           <HexDigit>
+<UINT32z>              ::= {"0x"} {"0X"} <HexDigit> <HexDigit>
+                           <HexDigit> <HexDigit> <HexDigit> <HexDigit>
+                           <HexDigit> <HexDigit>
+<UINT64z>              ::= {"0x" <HexDigit> <HexDigit> <HexDigit>
+                           <HexDigit> <HexDigit> <HexDigit> <HexDigit>
+                           <HexDigit> <HexDigit> <HexDigit> <HexDigit>
+                           <HexDigit> <HexDigit> <HexDigit> <HexDigit>
+                           <HexDigit>
+<ShortNum>             ::= (0-255)
+<IntNum>               ::= (0-65535)
+<LongNum>              ::= (0-4294967295)
+<LongLongNum>          ::= (0-18446744073709551615)
+<ValUint8>             ::= {<ShortNum>} {<UINT8>} {<BoolVal>}
+                           {<CString>} {<UnicodeString>}
+<ValUint16>            ::= {<IntNum>} {<UINT16>} {<BoolVal>}
+                           {<CString>} {<UnicodeString>}
+<ValUint32>            ::= {<LongNum>} {<UINT32>} {<BoolVal>}
+                           {<CString>} {<UnicodeString>}
+<ValUint64>            ::= {<LongLongNum>} {<UINT64>} {<BoolVal>}
+                           {<CString>} {<UnicodeString>}
+<NumValUint8>          ::= {<ValUint8>} {"{"<ValUint8>"}"}
+<NumValUint16>         ::= {<ValUint16>}
+                           {"{"<ValUint8> [<CommaSpace> <ValUint8>]*"}"}
+<NumValUint32>         ::= {<ValUint32>}
+                           {"{"<ValUint8> [<CommaSpace> <ValUint8>]*"}"}
+<NumValUint64>         ::= {<ValUint64>}
+                           {"{"<ValUint8> [<CommaSpace> <ValUint8>]*"}"}
+<StringVal>            ::= {<UnicodeString>} {<CString>} {<Array>}
+<Array>                ::= "{" {<Array>} {[<Lable>] <ArrayVal>
+                           [<CommaSpace> [<Lable>] <ArrayVal>]* } "}"
+<ArrayVal>             ::= {<Num8Array>} {<GuidStr>} {<DevicePath>} {<CodeStr>}
+<NonNumType>           ::= {<BoolVal>} {<UnicodeString>} {<CString>}
+                           {<Offset>} {<UintMac>}
+<GuidStr>              ::= "GUID(" <GuidVal> ")"
+<CodeStr>              ::= "CODE(" <CData> ")"
+<GuidVal>              ::= {<DblQuote> <RegistryFormatGUID> <DblQuote>}
+                           {<CFormatGUID>} {<CName>}
+<DevicePath>           ::= "DEVICE_PATH(" <DevicePathStr> ")"
+<DevicePathStr>        ::= A double quoted string that follow the device path
+                           as string format defined in UEFI Specification 2.6
+                           Section 9.6
+<Num8Array>            ::= {<NonNumType>} {<ShortNum>} {<UINT8>}
+<Num16Array>           ::= {<NonNumType>} {<IntNum>} {<UINT16>}
+<Num32Array>           ::= {<NonNumType>} {<LongNum>} {<UINT32>}
+<Num64Array>           ::= {<NonNumType>} {<LongLongNum>} {<UINT64>}
+<UintMac>              ::= {<Uint8Mac>} {<Uint16Mac>} {<Uint32Mac>} {<Uint64Mac>}
+<Uint8Mac>             ::= "UINT8(" <Num8Array> ")"
+<Uint16Mac>            ::= "UINT16(" <Num16Array> ")"
+<Uint32Mac>            ::= "UINT32(" <Num32Array> ")"
+<Uint64Mac>            ::= "UINT64(" <Num64Array> ")"
+<Lable>                ::= "LABEL(" <CName> ")"
+<Offset>               ::= "OFFSET_OF(" <CName> ")"
+<ModuleType>           ::= {"BASE"} {"SEC"} {"PEI_CORE"} {"PEIM"}
+                           {"DXE_CORE"} {"DXE_DRIVER"} {"SMM_CORE"}
+                           {"DXE_RUNTIME_DRIVER"} {"DXE_SAL_DRIVER"}
+                           {"DXE_SMM_DRIVER"} {"UEFI_DRIVER"}
+                           {"UEFI_APPLICATION"} {"USER_DEFINED"}
+                           {"HOST_APPLICATION"}
+<ModuleTypeList>       ::= <ModuleType> [" " <ModuleType>]*
+<Boolean>              ::= {<BoolType>} {<Expression>}
+<EOL>                  ::= <TS> 0x0A 0x0D
+<OA>                   ::= (a-zA-Z)(a-zA-Z0-9)*
+<arch>                 ::= {"IA32"} {"X64"} {"EBC"} {<OA>} {"COMMON"}
+<MacroDefinition> ::= {<NormalMacro>}
+<NormalMacro>     ::= <TS> "DEFINE" <MTS> <MACRO> <Eq> [<Value>] <EOL>
+<Value>           ::= {<Number>} {<BoolType>} {<GUID>}
+                      {<CString>} {<UnicodeString>} {<CArray>}
+                      {<PATH>} {<Expression>} {<CFlags>}
+                      {<RelativePath>} {<Filename>}
+<Conditional>       ::= <IfStatement> <EOL>
+                        <ElseIfConditional>*
+                        [<ElseConditional>]
+                        <TS> "!endif" <EOL>
+<IfStatement>       ::= {<TS> "!if" <MTS> <Expression> <EOL>}
+                        {<TS> "!ifdef" <MTS> <MACRO> <EOL>}
+                        {<TS> "!ifndef" <MTS> <MACRO> <EOL>}
+                        <Statements>*
+<Statements>        ::= {<Sections>} {<Conditonal>} {<SectionStatements>}
+<Sections>          ::= _ValidStatements_
+<SectionStatements> ::= _ValidStatements_
+<ElseIfConditional> ::= <TS> "!elseif" <MTS> <Expression>
+                        <EOL>
+                        <Statements>*
+<ElseConditional>   ::= <TS> "!else" <EOL>
+                        <Statements>*
+<IncludeStatement> ::= <TS> "!include" <MTS> <Filename> <EOL>
+<ErrorStatement> ::= <TS> "!error" <MTS> <ErrorMessage> <EOL> <ErrorMessage> ::= <AsciiString>
+#==============Header SECTION======================
+#https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/34_header_section.html
+<Header>      ::= <Comment>*
+                  "##" <Space> [<Space>] "@file" <EOL>
+                  [<Abstract>]
+                  [<Description>]
+                  <Copyright>+
+                  "#" <EOL>
+                  <License>+
+                  "##" <EOL>
+<Filename>    ::= <Word> "." <Extension>
+<Abstract>    ::= "#" <MTS> <AsciiString> <EOL> ["#" <EOL>]
+<Description> ::= ["#" <MTS> <AsciiString> <EOL>]+
+                  ["#" <EOL>]
+<Copyright>   ::= "#" <MTS> <CopyName> <Date> "," <CompInfo> <EOL>
+<CopyName>    ::= ["Portions" <MTS>] "Copyright (c)" <MTS>
+<Date>        ::= <Year> [<TS> {<DateList>} {<DateRange>}]
+<Year>        ::= "2" (0-9)(0-9)(0-9)
+<DateList>    ::= <CommaSpace> <Year> [<CommaSpace> <Year>]*
+<DateRange>   ::= "-" <TS> <Year>
+<CompInfo>    ::= (0x20 - 0x7e)* <MTS> "All rights reserved." [<TS> "<BR>"]
+<License>     ::= ["#" <MTS> <AsciiString> <EOL>]+
+                  ["#" <EOL>]
+#==============Defines SECTION======================
+# https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/35_[defines]_section.html
+
+<Defines>      ::= "[Defines]" <EOL>
+                   <Statements>*
+<Statements>   ::= <TS> "DSC_SPECIFICATION" <Eq> <SpecValue> <EOL>
+                   <TS> "PLATFORM_NAME" <Eq> <Word> <EOL>
+                   <TS> "PLATFORM_GUID" <Eq> <RegistryFormatGUID> <EOL> <TS>
+                   "PLATFORM_VERSION" <Eq> <DecimalVersion> <EOL> [<TS>
+                   "SKUID_IDENTIFIER" <Eq> <SkuUiName> <EOL>]
+                   <TS> "SUPPORTED_ARCHITECTURES" <Eq> <ArchList> <EOL>
+                   <TS> "BUILD_TARGETS" <Eq> <BuildTargets> <EOL> [<TS>
+                   "OUTPUT_DIRECTORY" <Eq> <OUTPATH> <EOL>]
+                   [<TS> "FLASH_DEFINITION" <Eq> <Filename> <EOL>] [<TS>
+                   "BUILD_NUMBER" <Eq> <BuildNumber> <EOL>]
+                   [<TS> "RFC_LANGUAGES" <Eq> <Rfc4646List> <EOL>]
+                   [<TS> "ISO_LANGUAGES" <Eq> <Iso6392List> <EOL>] [<TS>
+                   "TIME_STAMP_FILE" <Eq> <Filename> <EOL>]
+                   [<TS> "VPD_TOOL_GUID" <Eq> <RegistryFormatGUID>
+                   <EOL>]
+                   [<TS> "PCD_VAR_CHECK_GENERATION" <Eq> <TF> <EOL>]
+                   [<TS> "PREBUILD" <Eq> <Script> <EOL>]
+                   [<TS> "POSTBUILD" <Eq> <Script> <EOL>]
+                   [<TS> <AddressStmts>]
+                   <IncludeStatement>*
+                   <MacroDefinition>*
+<SpecValue>    ::= {<HexVersion>} {(0-9)+ "." (0-9)+}
+<SkuUiName>    ::= <CName> [<FS> <CName>]*
+<ArchList>     ::= <arch> [<FS> <arch>]*
+<AddressStmts> ::= "FIX_LOAD_TOP_MEMORY_ADDRESS" <Eq> <Address> <EOL>
+<Address>      ::= <NumValUint64>
+<BuildTargets> ::= _Target_ [<FS> _Target_]*
+<OUTPATH>      ::= [<AbsolutePath>] <PATH>
+<AbsolutePath> ::= [<DosPath>] <FileSep>
+<DosPath>      ::= (a-zA-Z) ":"
+<BuildNumber>  ::= <NumValUint16>
+<Rfc4646List>  ::= <DblQuote> <Rfc4646Code> [<Ext4646>]* <DblQuote>
+<Ext4646>      ::= ";" <Rfc4646Code>
+<Iso6392List>  ::= <DblQuote> <Iso639-2Code> [<Ext639>]* <DblQuote>
+<Ext639>       ::= <Iso639-2Code>
+<Rfc4646Code>  ::= RFC4646 Format Language code
+                   <Iso639-2
+Code>          ::= ISO 639-2 Format Language code
+<TF>           ::= {"TRUE"} {"FALSE"}
+<Script>       ::= [<Interpreter>] <Filename> [<Options>]
+<Options>      ::= {<AsciiString>} {<QuotedString>}
+#==============BuildOptions SECTION======================
+# https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/36_[buildoptions]_sections.html
+<BuildOptions> ::= "[BuildOptions" [<attribs>] "]" <EOL> <Statements>*
+<attribs>      ::= "." <arch> [<CodeBase> ["." <ModuleType>]]
+<CodeBase>     ::= "." {"Common"} {"EDKII"}
+<Statements>   ::= {<MacroDefinition>} {<IncludeStatement>}
+                   {<TS> <BStatement>}
+<BStatement>   ::= {<ToolFlag>} {<ToolPath>} {<ToolCmd>} {<Other>}
+<ToolFlag>     ::= [<Family> ":"] <FlagSpec> <Equal> <Flags> <EOL>
+<ToolPath>     ::= [<Family> ":"] <PathSpec> <Equal> <PATH> <EOL>
+<ToolCmd>      ::= [<Family> ":"] <CmdSpec> <ReplaceEq>
+                   <ExecCmd> <EOL>
+<Other>        ::= [<Family> ":"] <OtherSpec> <Equal> <String> <EOL>
+<Equal>        ::= {<AppendEq>} {<ReplaceEq>}
+<AppendEq>     ::= <Eq>
+<ReplaceEq>    ::= <TS> "==" <TS>
+<Family>       ::= _Family_
+<ToolSpec>     ::= <Target> "_" <TagName> "_" <TargetArch> "_" <ToolCode>
+<FlagSpec>     ::= <ToolSpec> "_FLAGS"
+<PathSpec>     ::= <ToolSpec> "_DPATH"
+<CmdSpec>      ::= <ToolSpec> "_PATH"
+<OtherSpec>    ::= <ToolSpec> "_" <Attribute>
+<TargetArch>   ::= _TargetArch_
+<Target>       ::= _Target_
+<Attribute>    ::= _AttributeName_
+<TagName>      ::= _TagName_
+<ToolCode>     ::= _ToolCode_
+<Flags>        ::= _FlagString_
+<ExecCmd>      ::= [<PATH>] <Filename>
+
+#==============SKUID SECTION======================
+# https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/37_[skuids]_section.html
+<SkuId>     ::= "[SkuIds]" <EOL>
+                {<Statement>*} {<IncludeStatement>}
+<Statement> ::= <TS> <Number> <FS> <CName> [<FS> <CName>] <EOL>
+
+#==============LibraryClasses SECTION======================
+# https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/38_[libraryclasses]_sections.html
+<LibraryClasses>   ::= "[LibraryClasses" [<attribs>] "]" <EOL> <LcStatements>*
+<attribs>          ::= <attrs> ["," "LibraryClasses" <attrs>]*
+<attrs>            ::= "." <arch> ["." <ModuleType>]
+<LcStatements>     ::= {<MacroDefinition>} {<IncludeStatment>}
+                       {<TS> <LcEntry>}
+<LcEntry>          ::= <LibraryClassName> <FS> <LibraryInstance> <EOL>
+<LibraryClassName> ::= (A-Z)(a-zA-Z0-9)*
+<LibraryInstance>  ::= <InfFileName> <EOL>
+<InfFileName>      ::= <PATH> <Word> ".inf"
+
+#==============PCD's SECTION======================
+# https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/39_pcd_sections.html
+<Pcds>         ::= "[PcdsFeatureFlag" [<attribs>] "]" <EOL> 
+                   <FFStatments>*
+<FFStatements> ::= {<MacroDefinition>} {<IncludeStatement>} {<PcdEntry>}
+<attribs>      ::= <attrs> ["," <TS> "PcdsFeatureFlag" <attrs>]*
+<attrs>        ::= "." <arch> ["." <SkuIds>]
+<SkuIdS>       ::= <Keyword> [<FS> <Keyword>]*
+<Keyword>      ::= <CName>
+<PcdEntry>     ::= <TS> <PcdName> <FS> <PcdValue> <EOL>
+<PcdValue>     ::= {<BoolType>} {<MACROVAL>} {<Expression>}
+
+#==============Components SECTION======================
+# https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/310_[components]_sections.html
+<Components>       ::= "[Components" [<attribs>] "]" <EOL>
+                       <ModuleStatements>*
+<attribs>          ::= <attrs> ["," <TS> "Components" <attrs>]*
+<attrs>            ::= "." <arch>
+<ModuleStatements> ::= {<MacroDefinition>}
+                       {<IncludeStatement>} {<TS> <InfFiles>}
+<InfFiles>         ::= <InfFilename> [<MTS> <Options>] <EOL>
+<Options>          ::= {<Exec>} {<Edk2Struct>}
+<InfFilename>      ::= <PATH> <Word> ".inf"
+<Exec>             ::= "EXEC" <Eq> <ExecFilename>
+<ExecFilename>     ::= <PATH> <Word> ["." <ExecExtension>]
+<ExecExtension>    ::= <Word> # An OS recognisable extension that will #
+                       automatically be run.
+<Edk2Struct>       ::= "{" <EOL>
+                       [<TS> <DefSec>]
+                       [<TS> <LibraryClasses>]
+                       [<TS> <PcdsFeatureFlag>]
+                       [<TS> <PcdsFixed>]
+                       [<TS> <PcdsPatchable>]
+                       [<TS> <BuildOptions>] "}"
+<DefSec>           ::= "<Defines>" <EOL>
+                       <TS> "FILE_GUID" <EQ> <RegistryFormatGuid> <EOL>
+<LibraryClasses>   ::= "<LibraryClasses>" <EOL> <LcEntries>*
+<LcEntries>        ::= {<MacroDefinition>} {<IncludeStatement>} {<TS>
+                       <LibraryInstances>}
+<LibraryInstances> ::= {<ClassInstanceMap>} {<NullLibInstances>}
+<ClassInstanceMap> ::= <ClassName> <FS> <InfFilename> <EOL>
+<ClassName>        ::= (A-Z)(a-zA-Z0-9)*
+<NullLibInstances> ::= "NULL" <FS> <InfFilename> <EOL>
+<PcdsFeatureFlag>  ::= "<PcdsFeatureFlag>" <EOL> 
+                        <PcdsFFEntries>*
+<PcdsFFEntries>    ::= {<MacroDefinition>} {<IncludeStatement>} {<TS>
+                       <PcdFeatureEntry>}
+<PcdFeatureEntry>  ::= <PcdName> <FS> <PcdFeatureValue> <EOL>
+<PcdFeatureValue>  ::= {<BoolType>} {<MACROVAL>} {<Expression>}
+<PcdsFixed>        ::= "<PcdsFixedAtBuild>" <EOL>
+                        <PcdEntries>*
+<PcdEntries>       ::= {<MacroDefinition>} {<IncludeStatement>}
+                       {<TS> <PcdEntry>}
+<PcdsPatchable>    ::= "<PcdsPatchableInModule>" <EOL>
+                       <PcdEntries>*
+<PcdEntry>         ::= <PcdName> [<FS> <PcdValue>] <EOL>
+<PcdValue>         ::= if (pcddatumtype == "BOOLEAN"):
+                         {<BoolType>} {<Expression>}
+                       elif (pcddatumtype == "UINT8"):
+                         {<NumValUint8>} {<Expression>}
+                       elif (pcddatumtype == "UINT16"): 
+                         {<NumValUint16>} {<Expression>}
+                       elif (pcddatumtype == "UINT32"):
+                         {<NumValUint32>} {<Expression>}
+                       elif (pcddatumtype == "UINT64"):
+                         {<NumValUint64>} {<Expression>}
+                       else:
+                         <StringValue> [<MaxSize>]
+<MaxSize>          ::= <FS> "VOID*" [<FS> <SizeValue>]
+<SizeValue>        ::= {<Number>} {<Expression>}
+<StringValue>      ::= {<StringVal>} {<MACROVAL>} {<Expression>}
+<BuildOptions>     ::= "<BuildOptions>" <EOL>
+                       [<DefineStatements>]*
+                       [<TS> <ToolFlags>]+
+                       [<TS> <ToolPath>]*
+                       [<TS> <ToolCmd>]*
+                       [<TS> <Other>]*
+<ToolFlags>        ::= [<Family> ":"] <FlagSpec> <Equal> <Flags> <EOL>
+<ToolSpec>         ::= <Target> "_" <TagName> "_" <Tarch> "_" <ToolCode>
+<FlagSpec>         ::= <ToolSpec> "_FLAGS"
+<ToolPath>         ::= [<Family> ":"] <PathSpec> <Equal> <PATH> <EOL>
+<PathSpec>         ::= <ToolSpec> "_DPATH"
+<ToolCmd>          ::= [<Family> ":"] <CmdSpec> <ReplaceEq> <PathCmd> <EOL>
+<CmdSpec>          ::= <ToolSpec> "_PATH"
+<PathCmd>          ::= <PATH> <Word> ["." <Extension>]
+<Extension>        ::= (a-zA-Z)(a-zA-Z0-9_-)*
+<Other>            ::= [<Family> ":"] <OtherSpec>
+<OtherSpec>        ::= <ToolSpec> "_" <Attribute> <Equal> <String>
+<Equal>            ::= {<AppendEq>} {<ReplaceEq>}
+<AppendEq>         ::= <Eq>
+<ReplaceEq>        ::= <TS> "==" <TS>
+<Tarch>            ::= {"IA32"} {"X64"} {"EBC"} {*} {<OA>}
+<OA>               ::= (A-Z) (A-Z0-9)*
+<Family>           ::= _Family_
+<Attribute>        ::= _Attribute_
+<Target>           ::= _Target_
+<TagName>          ::= _TagName_
+<ToolCode>         ::= _ToolCode_
+<Flags>            ::= _FlagString_
+
+#==============UserExtensions SECTION======================
+# https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/311_[userextensions]_sections.html
+<UserExtensions>   ::= "[UserExtensions" <attrs> "]"" <EOL> [<statements>]
+<attrs>            ::= <UserId> <IdentifierString> [<attr>]
+<attr>             ::= "." <arch>
+<UserId>           ::= "." <Word>
+<IdentifierString> ::= "." {<Word>} {<QuotedString>}
+<statements>       ::= Content is build tool chain specific.
+
+#==============DefaultStores SECTION======================
+# https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/312_[defaultstores]_section.html
+<DefaultStore>     ::= "[DefaultStores]" <EOL>
+                {<Statement>*}
+<Statement> ::= <TS> <Number> <FS> <CName> <EOL>
+

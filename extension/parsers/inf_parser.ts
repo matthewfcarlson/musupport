@@ -1,7 +1,7 @@
-import { promisifyReadFile, stringTrim } from "../../utilities";
-import { logger } from "../../logger";
+import { promisifyReadFile, stringTrim } from "../utilities";
+import { logger } from "../logger";
 import * as path from 'path';
-import { InfData } from "../types";
+import { InfData } from "../cpp/types";
 
 export class InfPaser {
     public static async ParseInf(infpath: string): Promise<InfData> {

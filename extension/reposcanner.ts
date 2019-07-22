@@ -35,11 +35,15 @@ export class RepoScanner implements vscode.Disposable {
         }
 
         // Find all DSC files in the workspace that match the specified glob
-        var platformDscFiles = await vscode.workspace.findFiles(`**/${platformDsc}`); // TODO: Better path handling
+        var searchPath = path.join("**", platformDsc);
+        var platformDscFiles = await vscode.workspace.findFiles(searchPath); // TODO: Better path handling
         if (!platformDscFiles) {
+            logger.warn("No files found for the GLOB")
             return null;
         }
-
+        logger.info(platformDscFiles.toString());
+        logger.info(searchPath);
+        
         // Create a project definition for each DSC file
         var promises = platformDscFiles
             .map((f) => this.createProjectDefFromDsc(f));
@@ -60,6 +64,7 @@ export class RepoScanner implements vscode.Disposable {
         // Project name derived from the folder that contains the build script
         // TODO: Pull it from the DSC file instead...
         proj.projectName = path.basename(proj.projectRoot);
+        logger.info("Found project "+proj.projectName);
 
         // Find the PlatformBuild.py file matching a pattern, if available
         const config = vscode.workspace.getConfiguration(null, null);

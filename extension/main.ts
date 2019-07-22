@@ -12,6 +12,7 @@ import { ProjectManager } from './projectmanager';
 import { UefiTerminal } from './terminal';
 import { UefiCommands } from './commands';
 import * as exec from './exec';
+import * as DSC_LSP from './dsc/DSC';
 
 let main: MainClass = undefined;
 
@@ -49,6 +50,7 @@ export class MainClass implements vscode.Disposable {
         try {
             this.commands.register(this.context);
             this.tasks.register();
+            DSC_LSP.activate(this.context);
 
             let scanCommand = this.commands.executeCommand('musupport.scan');
             // TODO: On scan completion load or update the C/C++ extension
