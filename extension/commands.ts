@@ -139,8 +139,15 @@ export class UefiCommands implements vscode.Disposable {
 
     async installMuEnvironment() {
         // TODO: If pip_requirements.txt isn't present, install the latest mu_build modules...
-        await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "-r", "pip_requirements.txt"]);
-        //await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "mu-build", "mu-environment", "mu-python-library"]);
-        // TODO: Catch errors
+        try {
+            await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "-r", "pip_requirements.txt"]);
+        }
+        catch {
+            logger.info("Failed to install requirements");
+            await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "mu-build"]);
+            //installing mu_build will install all the needed dependencies 
+            //TODO catch errors if we fail in the second install
+        }
+        
     }
 }

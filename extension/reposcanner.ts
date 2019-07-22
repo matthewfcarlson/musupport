@@ -35,14 +35,11 @@ export class RepoScanner implements vscode.Disposable {
         }
 
         // Find all DSC files in the workspace that match the specified glob
-        var searchPath = path.join(vscode.workspace.rootPath, "**", platformDsc);
-        var platformDscFiles = await vscode.workspace.findFiles(searchPath); // TODO: Better path handling
+        var platformDscFiles = await vscode.workspace.findFiles("**/"+platformDsc); // TODO: Better path handling
         if (!platformDscFiles) {
             logger.warn("No files found for the GLOB")
             return null;
         }
-        logger.info(platformDscFiles.toString());
-        logger.info(searchPath);
         
         // Create a project definition for each DSC file
         var promises = platformDscFiles
@@ -59,6 +56,7 @@ export class RepoScanner implements vscode.Disposable {
         var proj = new ProjectDefinition();
         proj.platformDscPath = uri.fsPath;
         proj.projectRoot = path.dirname(uri.fsPath);
+        //TODO read the DSC in and parse it
         proj.buildRoot = ""; // TODO: Point to build folder (eg. /Build/MsftXPkg/)
 
         // Project name derived from the folder that contains the build script
