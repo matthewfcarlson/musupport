@@ -15,7 +15,11 @@ export class ProjectTreeNodeProvider implements vscode.TreeDataProvider<ProjectT
 	}
 
 	register() {
-		vscode.window.registerTreeDataProvider('uefiProjects', this);
+        vscode.window.registerTreeDataProvider('uefiProjects', this);
+        
+        vscode.commands.registerCommand(
+            'uefiProjects.select', projName => { this.projManager.selectProject(projName); }
+        );
 
 		this.repoScanner.onProjectDiscovered((proj) => {
 			this.refresh();
@@ -51,8 +55,13 @@ export class ProjectTreeItem extends vscode.TreeItem {
 	constructor(
 		public readonly proj: ProjectDefinition
 	) {
-		super(proj.projectName, vscode.TreeItemCollapsibleState.None);
-	}
+        super(proj.projectName, vscode.TreeItemCollapsibleState.None);
+        this.command = {
+            title: '',
+            command: "uefiProjects.select",
+            arguments: [proj.projectName]
+        };
+    }
 
 	get tooltip(): string {
 		return `${this.proj.platformBuildScriptPath}`;
