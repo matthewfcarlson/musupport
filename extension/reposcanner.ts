@@ -35,7 +35,7 @@ export class RepoScanner implements vscode.Disposable {
         }
 
         // Find all DSC files in the workspace that match the specified glob
-        var searchPath = path.join("**", platformDsc);
+        var searchPath = path.join(vscode.workspace.rootPath, "**", platformDsc);
         var platformDscFiles = await vscode.workspace.findFiles(searchPath); // TODO: Better path handling
         if (!platformDscFiles) {
             logger.warn("No files found for the GLOB")
