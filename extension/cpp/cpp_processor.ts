@@ -4,7 +4,7 @@ import { logger } from '../logger';
 import { containsMuProjects, promisifyReadDir, promisifyExists, promisifyGlob, promisifyIsDir, promisifyReadFile } from '../utilities';
 
 import * as makefile_parser from './parsers/makefile_parser';
-import { match } from 'minimatch';
+//import { match } from 'minimatch';
 import { InfStore, DecStore } from './data_store';
 import { CCppProperties } from "./cpp_properties";
 import { SourceFileConfigurationItem, SourceFileConfiguration } from 'vscode-cpptools';
