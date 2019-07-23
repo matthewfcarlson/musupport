@@ -1,5 +1,5 @@
-import { IDscData, IDscDataExtended, IDscDefines, IDscPcd, ISourceInfo, IDscError } from '../parsers/types';
-import { promisifyReadFile, stringTrimLeft, stringTrimRight } from "../utilities";
+import { IDscData, IDscDataExtended, IDscDefines, IDscPcd, ISourceInfo, IDscError, DscSections, DscPcdType } from '../parsers/types';
+import { promisifyReadFile, stringTrimLeft, stringTrimRight, stringTrim } from '../utilities';
 import { logger } from "../logger";
 import * as path from 'path';
 import { Uri } from 'vscode';
@@ -22,6 +22,12 @@ interface DscLine {
 interface IParseStack {
   source: ISourceInfo;
   lines: DscLine[];
+}
+
+// A section that we want to parse like Define or 
+interface IParseSection {
+  type: DscSections|DscPcdType;
+  kind: String[]; //common, x64, common.PEIM
 }
 
 export class DscPaser {
@@ -127,6 +133,17 @@ export class DscPaser {
       lines: null
     });
 
+    var validSections: string[] = [];
+    var currentSection:IParseSection;
+    currentSection.type = null;
+    for(var n in DscSections) {
+      validSections.push(n);
+    }
+    for(var n in DscPcdType) {
+      validSections.push("Pcd"+n);
+    }
+    logger.info("Valid Sections:"+validSections);
+
     //first we need to open the file
     while (parseStack.length != 0){
       var currentParsing = parseStack[0];
@@ -147,13 +164,59 @@ export class DscPaser {
         currentParsing.source.column = 0;
         currentParsing.source.lineno = currentLine.lineNo;
         if (currentLine.line.startsWith("!include")) { // if we're on the include path
-          //TODO: unshift a new parsing onto the stack
+          //TODO unshift a new parsing onto the stack
           break;
         }
-        //TODO: add more of the section
-        if (current)
-        else {
-
+        else if (currentLine.line.startsWith("!if")) {
+          //TODO: handle the conditional
+          logger.warn("Skipping conditional because we don't know what to do with it")
+        }
+        else if (currentLine.line == "!else") {
+          //TODO handle the else
+        }
+        else if (currentLine.line == "!endif") {
+          //TODO handle the end of the if
+        }
+        
+        else if (currentLine.line.startsWith("[") && currentLine.line.endsWith("]")) { //if we're on a new section
+          //handle the new section
+          let sectionTypes = currentLine.line.split(",").map(stringTrim); //get a list of the sections in the brackets
+          let sectionTypeLists = sectionTypes.map((x)=> {
+            return x.split(".");
+          });
+          let sectionType = sectionTypeLists[0][0];
+          logger.info("Parsing section of type "+sectionType + " at " + currentParsing.source.lineno);
+          
+          for (var i = 0; i < sectionTypeLists.length; i++){
+            let currentSectionType = sectionTypeLists[i].shift();
+            if (currentSectionType != sectionType) { //make sure all the sections match
+              //we're going to keep parsing and assume we're correct in the future?
+              data.errors.push(this.MakeError("Section type does not match rest of section", currentSectionType, currentParsing.source, false));
+            }
+            //TODO validate each of the types to make sure it's valid
+            if (validSections.indexOf(currentSectionType) == -1){
+              data.errors.push(this.MakeError("Section type is not a valid section", currentSectionType, currentParsing.source, true));
+            }
+          }
+          
+          let sectionTypeDescriptors = [];
+          sectionTypeLists.forEach((x)=>{
+            let type = x.join(".");
+            sectionTypeDescriptors.push(type);
+          });
+          
+          var sectionTypeEnum = sectionType.startsWith("Pcd")?DscPcdType[sectionType.substr(3)]:DscSections[sectionType];
+          
+          currentSection = {
+            type: sectionTypeEnum,
+            kind: sectionTypeDescriptors
+          }
+        }
+        else if (currentSection.type == null){
+          data.errors.push(this.MakeError("This line doesn't coorespond to a good section", currentLine.line, currentParsing.source, true));
+        }
+        else if (currentSection.type == DscSections.LibraryClasses) {
+          //parse the library classes?
         }
       }
     }

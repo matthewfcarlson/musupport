@@ -81,6 +81,16 @@ export enum DscArch {
   UNKNOWN
 }
 
+export enum DscSections {
+  Defines,
+  SkuIds,
+  LibraryClasses,
+  Components,
+  BuildOptions,
+  UserExtensions,
+  DefaultStores
+}
+
 export interface IDscPcd {
   source: ISourceInfo;
   tokenspace: String;
