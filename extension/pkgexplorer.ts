@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { RepoScanner, PackageDefinition } from './reposcanner';
+import { logger } from './logger';
+
+const VIEW_NAMESPACE: string = 'uefiPackageExplorer';
 
 /**
  * Provides a treeview for exploring UEFI packages.
@@ -19,15 +22,22 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
     ) { }
 
     public register(context: vscode.ExtensionContext) {
-        const view = vscode.window.createTreeView('uefiPackageExplorer', {
+        const view = vscode.window.createTreeView(VIEW_NAMESPACE, {
             treeDataProvider: this
         });
 
         this.packages = [];
+
+        // Subscribe to package discovery
+        // TODO: Delete packages that are missing
         this.repoScanner.onPackageDiscovered((pkg) => { 
             this.packages.push(pkg);
             this.refresh(); 
         });
+
+        vscode.commands.registerCommand(
+            `${VIEW_NAMESPACE}.select`, item => { this.selectItem(item); }
+        );
     }
 
     refresh(): void {
@@ -52,6 +62,18 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
             return Promise.resolve(this.packages.map((pkg) => new PkgNode(pkg) ));
         }
     }
+
+    private selectItem(element?: Node) {
+        if (element.contextValue == 'mu-pkg') {
+            let pkg = (element as PkgNode).pkg;
+            this.navigateToPackageFile(pkg);
+        }
+    }
+
+    private navigateToPackageFile(pkg: PackageDefinition) {
+        logger.info(`Selected package: ${pkg.dscPath}`);
+        vscode.window.showTextDocument(pkg.dscPath, { preserveFocus: true });
+    }
 }
 
 abstract class Node extends vscode.TreeItem {
@@ -60,6 +82,12 @@ abstract class Node extends vscode.TreeItem {
         public readonly hasChildren: boolean = false
     ) {
         super(label, ((hasChildren) ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None));
+
+        this.command = {
+            title: '',
+            command: `${VIEW_NAMESPACE}.select`,
+            arguments: [this]
+        };
     }
 
     getChildren() : Thenable<Node[]> { return Promise.resolve(null); }
@@ -72,7 +100,7 @@ abstract class Node extends vscode.TreeItem {
  */
 export class PkgNode extends Node {
     constructor (
-        private readonly pkg: PackageDefinition
+        public readonly pkg: PackageDefinition
     ) {
         super(pkg.name, true);
     }
