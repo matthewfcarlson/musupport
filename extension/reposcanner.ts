@@ -7,15 +7,58 @@ import { stringify } from 'querystring';
 import { logger } from './logger';
 import { InfPaser } from './cpp/parsers/inf_parser';
 
+/***
+ * Represents a DSC package
+ * A package may include zero or more components (.inf), library classes, or PCDs. 
+ */
 export class PackageDefinition {
     name: string; // eg. 'MdePkg'
 
     dscPath: vscode.Uri;
 
     defines: Map<string, string>;
-    pcds: string[];
-    components: string[];
-    libraryClasses: string[];
+    pcds: PCD[];
+    components: ComponentDefinition[];
+    libraryClasses: LibraryClassDefinition[];
+}
+
+/***
+ * Represents a PCD entry in a DSC
+ */
+export class PCD {
+    // TODO: Namespace, Name, Value
+    constructor(public name: string) { }
+}
+
+/***
+ * Represents a DXE/PEI/SMM Driver or Application, backed by a *.inf
+ * An INF may be included by one or more DSCs.
+ */
+export class ComponentDefinition {
+    name: string; // eg. 'HelloWorld.inf'
+    arch: string[]; // IA32, X64, etc.
+    type: string[]; // DXE, PEI, APP, etc.
+    path: vscode.Uri;
+
+    // TODO: INFs can have overidden Components/LibraryClasses/PCDs...
+
+    constructor(uri: vscode.Uri) {
+        this.path = uri;
+        this.name = path.basename(uri.fsPath);
+    }
+}
+
+export class LibraryClassDefinition {
+    name: string;
+    arch: string[];
+    type: string[]; // DXE, PEI, APP, etc.
+    path: vscode.Uri;
+    
+    constructor(uri: vscode.Uri, name: string = null, arch: string[] = null) {
+        this.path = uri;
+        this.name = (name) ? name : path.basename(uri.fsPath);
+        this.arch = arch;
+    }
 }
 
 /*
@@ -37,48 +80,57 @@ export class RepoScanner implements vscode.Disposable {
     }
 
     async scanForPackages() {
-        // TODO: If project is selected, filter search path to only those that the project references.
+        try {
+            // TODO: If project is selected, filter search path to only those that the project references.
 
-        // Find all DSC files in the workspace that match the specified glob
-        var dscFiles = await vscode.workspace.findFiles(`**/*.dsc`); // TODO: Better path handling
-        if (!dscFiles) {
-            return null;
-        }
+            // Find all DSC files in the workspace that match the specified glob
+            var dscFiles = await vscode.workspace.findFiles(`**/*.dsc`); // TODO: Better path handling
+            if (!dscFiles) {
+                return null;
+            }
 
-        for (let uri of dscFiles) {
-            let dscPath = uri;
-            let dscName = path.basename(uri.fsPath);
-            let dscParentPath = vscode.Uri.file(path.dirname(uri.fsPath));
-            let pkgsetName = path.basename(dscParentPath.fsPath);
+            for (let uri of dscFiles) {
+                let dscPath = uri;
+                let dscName = path.basename(uri.fsPath);
+                let dscParentPath = vscode.Uri.file(path.dirname(uri.fsPath));
+                let pkgsetName = path.basename(dscParentPath.fsPath);
 
-            let inf = await InfPaser.ParseInf(dscPath.fsPath);
-            if (inf && inf.defines) {
-                let pkgName = inf.defines.get('PLATFORM_NAME');
-                if (!pkgName) {
-                    pkgName = inf.defines.get('PACKAGE_NAME');
+                let inf = await InfPaser.ParseInf(dscPath.fsPath);
+                if (inf && inf.defines) {
+                    let pkgName = inf.defines.get('PLATFORM_NAME');
                     if (!pkgName) {
-                        pkgName = path.basename(uri.fsPath, '.dsc');
+                        pkgName = inf.defines.get('PACKAGE_NAME');
+                        if (!pkgName) {
+                            pkgName = path.basename(uri.fsPath, '.dsc');
+                        }
                     }
+                    //let pkgGuid = inf.defines.get('PLATFORM_GUID');
+
+                    let def: PackageDefinition = {
+                        name: pkgName,
+                        dscPath: dscPath,
+                        defines: inf.defines,
+                        components: inf.components.map((c) => new ComponentDefinition(vscode.Uri.file(c))),
+                        libraryClasses: inf.libraryClasses.map((cls) => {
+                            let [name, path] = cls.split('|');
+                            if (name && path) {
+                                return new LibraryClassDefinition(vscode.Uri.file(path), name); //, ['IA32','X64']);
+                            }
+                        }),
+                        pcds: inf.pcds.map((pcd) => new PCD(pcd))
+                    };
+
+                    //packageSets[dscParentPath.fsPath] = def;
+                    //packageSets.set(pkgsetName, def);
+                    logger.info(`Discovered DSC: ${pkgName}`);
+                    this._onPackageDiscovered.fire(def);
                 }
-                //let pkgGuid = inf.defines.get('PLATFORM_GUID');
-
-                let def: PackageDefinition = {
-                    name: pkgName,
-                    dscPath: dscPath,
-                    defines: inf.defines,
-                    components: inf.components.map((c) => path.basename(c)),
-                    libraryClasses: inf.libraryClasses.map((cls) => cls.split('|')[0]),
-                    pcds: inf.pcds
-                };
-
-                //packageSets[dscParentPath.fsPath] = def;
-                //packageSets.set(pkgsetName, def);
-                logger.info(`Discovered DSC: ${pkgName}`);
-                this._onPackageDiscovered.fire(def);
+                else {
+                    logger.warn(`Invalid DSC: ${dscPath.fsPath}`);
+                }
             }
-            else {
-                logger.warn(`Invalid DSC: ${dscPath.fsPath}`);
-            }
+        } catch (e) {
+            logger.error('ERROR SCANNING FOR PACKAGES');
         }
     }
 

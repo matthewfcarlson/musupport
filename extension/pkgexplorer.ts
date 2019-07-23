@@ -25,7 +25,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { RepoScanner, PackageDefinition } from './reposcanner';
+import { RepoScanner, PackageDefinition, ComponentDefinition, LibraryClassDefinition, PCD } from './reposcanner';
 import { logger } from './logger';
 
 const VIEW_NAMESPACE: string = 'uefiPackageExplorer';
@@ -100,7 +100,7 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
     }
 }
 
-abstract class Node extends vscode.TreeItem {
+class Node extends vscode.TreeItem {
     constructor(
         public readonly label: string,
         public readonly hasChildren: boolean = false
@@ -138,13 +138,22 @@ export class PkgNode extends Node {
     getChildren() : Thenable<Node[]> {
         let items: Node[] = [];
         if (this.pkg.libraryClasses && (this.pkg.libraryClasses.length > 0)) {
-            items.push(new ComponentNode("LibraryClasses", this.pkg.libraryClasses));
+            items.push(new PkgSectionNode(
+                "LibraryClasses", 
+                this.pkg.libraryClasses.map((o) => new LibraryClassNode(o))
+            ));
         }
         if (this.pkg.components && (this.pkg.components.length > 0)) {
-            items.push(new ComponentNode("Components", this.pkg.components));
+            items.push(new PkgSectionNode(
+                "Components", 
+                this.pkg.components.map((o) => new ComponentNode(o))
+            ));
         }
         if (this.pkg.pcds && (this.pkg.pcds.length > 0)) {
-            items.push(new ComponentNode("PCDs", this.pkg.pcds));
+            items.push(new PkgSectionNode(
+                "PCDs", 
+                this.pkg.pcds.map((o) => new Node(o.name, false))
+            ));
         }
         return Promise.resolve(items);
     }
@@ -153,33 +162,63 @@ export class PkgNode extends Node {
 /**
  * Represents a [LibraryClasses] or [Components] section inside the DSC
  */
-export class ComponentNode extends Node {
+export class PkgSectionNode extends Node {
     constructor(
         public readonly label: string,
-        public readonly items: string[]
+        public readonly items: Node[]
     ) {
         super(label, true);
     }
 
     getChildren() : Thenable<Node[]> {
-        return Promise.resolve(this.items.map((item) => new InfNode(item)));
+        return Promise.resolve(this.items);
     }
 }
 
-/**
- * Represents a library, driver, or application backed by a *.inf
- */
-export class InfNode extends Node {
+export class LibraryClassNode extends Node {
     constructor(
-        public readonly label: string,
-        public readonly arch: string[] = null
-    ) { 
-        super(label, false); // No children
+        public readonly libraryClass: LibraryClassDefinition
+    ) {
+        super(libraryClass.name, false);
     }
 
-    get description() : string {
-        return (this.arch) ? this.arch.join(',') : null;
-    }
+    get tooltip(): string { return this.libraryClass.path.fsPath; }
 
-    contextValue = 'mu-inf';
+    get description(): string { 
+        // eg. "[IA32,X64]"
+        return (this.libraryClass.arch) ? `[${this.libraryClass.arch.join(',')}]` : null; 
+    }
 }
+
+export class ComponentNode extends Node {
+    constructor(
+        public readonly component: ComponentDefinition
+    ) {
+        super(component.name, false);
+    }
+
+    get tooltip(): string { return this.component.path.fsPath; }
+
+    get description(): string { 
+        // eg. "[IA32,X64]"
+        return (this.component.arch) ? `[${this.component.arch.join(',')}]` : null; 
+    }
+}
+
+// /**
+//  * Represents a library, driver, or application backed by a *.inf
+//  */
+// export class InfNode extends Node {
+//     constructor(
+//         public readonly label: string,
+//         public readonly arch: string[] = null
+//     ) { 
+//         super(label, false); // No children
+//     }
+
+//     get description() : string {
+//         return (this.arch) ? this.arch.join(',') : null;
+//     }
+
+//     contextValue = 'mu-inf';
+// }
