@@ -78,7 +78,12 @@ export function promisifyReadFile(filename: string): Promise<string> {
 export function stringTrim(string: string) {
   return string.replace(/^\s+|\s+$/g, '');
 };
-
+export function stringTrimLeft(string: string) {
+  return string.replace(/^\s+/g, '');
+};
+export function stringTrimRight(string: string) {
+  return string.replace(/\s+$/g, '');
+};
 export function getPackageFromPath(uriSubPath: string): string | null {
   let pathFragments = path.normalize(uriSubPath).split(path.sep) // should be the file seperator of our system
   let packageName = "";

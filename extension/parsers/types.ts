@@ -108,7 +108,7 @@ export interface IDscComponent {
 export interface DscLibClass {
   source: ISourceInfo;
   infPath: String;
-  archs: String[];
+  archs: DscArch[];
   name: String;
   toString: ()=>String; // a function that returns a string
   //BuildOptions: DscBuildOption[];

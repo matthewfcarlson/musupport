@@ -1,10 +1,11 @@
 import { IDscData, IDscDataExtended, IDscDefines, IDscPcd, ISourceInfo, IDscError } from '../parsers/types';
-import { promisifyReadFile, stringTrim } from "../utilities";
+import { promisifyReadFile, stringTrimLeft, stringTrimRight } from "../utilities";
 import { logger } from "../logger";
 import * as path from 'path';
 import { Uri } from 'vscode';
 import { PathLike } from 'fs';
 import { ErrorCodes } from 'vscode-jsonrpc';
+import * as vscode from 'vscode';
 
 // Parses a DSC file, including !include
 
@@ -14,7 +15,8 @@ class DscData {
 
 interface DscLine {
   line: String,
-  lineNo: Number
+  lineNo: Number,
+  columnOffset: Number
 }
 
 interface IParseStack {
@@ -35,10 +37,55 @@ export class DscPaser {
     return null;
   }
 
+  // This get the lines from a DSC
   private static async GetCleanLinesFromUri(file: Uri): Promise<DscLine[]> {
     var lines = [];
 
-    return null;
+    //TODO figure out how to read a URI instead of relying on the filesystem
+    let filePath = file.fsPath;
+    try {
+      let fileContents = await promisifyReadFile(filePath);
+      let fileArray = fileContents.split("\n");
+      logger.info("filearray", fileArray);
+      // map the raw text to DSC lines
+      let lineArray = fileArray.map((line, i) => {
+        let line_length = line.length;
+        line = stringTrimLeft(line);
+        let column = line_length - line.length; //keep track of how much we snipped
+        
+        //remove comments
+        let pound_index = line.indexOf("#");
+        if (pound_index == 0) { // if it's the first character, just make sure it's an empty string
+          line = "";
+        }
+        if (pound_index != -1) { // if we have a comment
+          line = line.substring(0, pound_index);
+        }
+        //make sure to clean up after the comment
+        line = stringTrimRight(line);
+        //put the data in that we care about
+        var line_data: DscLine = {
+          line: line,
+          lineNo: i + 1, // one more than our current position in the array
+          columnOffset: column
+        };
+        return line_data;
+      });
+      logger.info("linearray", fileArray);
+
+      //remove lines that are whitespace
+      lineArray = lineArray.filter( (line) => {
+        if (line.line.length == 0) return false;
+        return true;
+      });
+      logger.info("linearray", fileArray);
+
+      return lineArray;
+
+    }
+    catch {
+      return null;
+    }
   }
 
   private static MakeError(msg:String, line:String, source:ISourceInfo, isFatal:Boolean=false): IDscError {
@@ -49,18 +96,17 @@ export class DscPaser {
       error_msg: msg,
       isFatal: isFatal,
       toString: () => {
-        return msg + " from " + source.uri.toString() + ":" + source.lineno
+        return msg + "@" + source.uri.toString() + ":" + source.lineno
       }
     }
-
     return result;
   }
 
   
 
-  public static async ParseFull(dscpath: Uri, workspacePath: Uri): Promise<IDscDataExtended> {
+  public static async ParseFull(dscpath: Uri|PathLike, workspacePath: Uri|PathLike): Promise<IDscDataExtended> {
     var data: IDscDataExtended = {
-      filePath: dscpath,
+      filePath: Uri.parse(dscpath.toString()),
       defines: [],
       findDefine: DscPaser.FindDefine, //search for a define by name
       libraries: [],
@@ -71,10 +117,10 @@ export class DscPaser {
     };
 
     var sources: ISourceInfo;
-    var parseStack: IParseStack[];
+    var parseStack: IParseStack[] = [];
     parseStack.push( {
       source : {
-        uri: dscpath,
+        uri: Uri.parse(dscpath.toString()),
         lineno: 0,
         column: 0, //if we don't have a column or don't know, it's 0
       },
@@ -104,6 +150,8 @@ export class DscPaser {
           //TODO: unshift a new parsing onto the stack
           break;
         }
+        //TODO: add more of the section
+        if (current)
         else {
 
         }
