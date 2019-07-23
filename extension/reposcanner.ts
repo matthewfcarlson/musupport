@@ -5,22 +5,9 @@ import * as utils from './utilities';
 import { ProjectDefinition, ProjectManager } from './projectmanager';
 import { stringify } from 'querystring';
 import { logger } from './logger';
-import { InfPaser } from './cpp/parsers/inf_parser';
-
-/***
- * Represents a DSC package
- * A package may include zero or more components (.inf), library classes, or PCDs. 
- */
-export class PackageDefinition {
-    name: string; // eg. 'MdePkg'
-
-    dscPath: vscode.Uri;
-
-    defines: Map<string, string>;
-    pcds: PCD[];
-    components: ComponentDefinition[];
-    libraryClasses: LibraryClassDefinition[];
-}
+import { InfData, DecData, IDscDataExtended, IDscData, IDscComponent, DscArch, ISourceInfo, DscLibClass } from "./parsers/types";
+import { DscPaser } from './dsc/parser';
+import { DscPackage } from './parsers/models';
 
 /***
  * Represents a PCD entry in a DSC
@@ -30,36 +17,6 @@ export class PCD {
     constructor(public name: string) { }
 }
 
-/***
- * Represents a DXE/PEI/SMM Driver or Application, backed by a *.inf
- * An INF may be included by one or more DSCs.
- */
-export class ComponentDefinition {
-    name: string; // eg. 'HelloWorld.inf'
-    arch: string[]; // IA32, X64, etc.
-    type: string[]; // DXE, PEI, APP, etc.
-    path: vscode.Uri;
-
-    // TODO: INFs can have overidden Components/LibraryClasses/PCDs...
-
-    constructor(uri: vscode.Uri) {
-        this.path = uri;
-        this.name = path.basename(uri.fsPath);
-    }
-}
-
-export class LibraryClassDefinition {
-    name: string;
-    arch: string[];
-    type: string[]; // DXE, PEI, APP, etc.
-    path: vscode.Uri;
-    
-    constructor(uri: vscode.Uri, name: string = null, arch: string[] = null) {
-        this.path = uri;
-        this.name = (name) ? name : path.basename(uri.fsPath);
-        this.arch = arch;
-    }
-}
 
 /*
     The RepoScanner class is responsible for scanning the repository for projects and other information.
@@ -69,10 +26,15 @@ export class RepoScanner implements vscode.Disposable {
     private readonly _onProjectDiscovered: vscode.EventEmitter<ProjectDefinition> = new vscode.EventEmitter<ProjectDefinition>();
     public  readonly  onProjectDiscovered: vscode.Event<ProjectDefinition>        = this._onProjectDiscovered.event;
 
-    private readonly _onPackageDiscovered: vscode.EventEmitter<PackageDefinition> = new vscode.EventEmitter<PackageDefinition>();
-    public  readonly  onPackageDiscovered: vscode.Event<PackageDefinition>        = this._onPackageDiscovered.event;
+    private readonly _onPackageDiscovered: vscode.EventEmitter<DscPackage> = new vscode.EventEmitter<DscPackage>();
+    public  readonly  onPackageDiscovered: vscode.Event<DscPackage>        = this._onPackageDiscovered.event;
 
-    constructor() {
+    // public projects: ProjectDefinition[];
+    // public packages: DscPackage[];
+    // public components: ComponentDefinition[];
+    // public libraryClasses: LibraryClassDefinition[];
+
+    constructor(private readonly workspace: vscode.WorkspaceFolder) {
     }
 
     dispose() {
@@ -90,43 +52,19 @@ export class RepoScanner implements vscode.Disposable {
             }
 
             for (let uri of dscFiles) {
+                let def: DscPackage;
                 let dscPath = uri;
-                let dscName = path.basename(uri.fsPath);
                 let dscParentPath = vscode.Uri.file(path.dirname(uri.fsPath));
-                let pkgsetName = path.basename(dscParentPath.fsPath);
 
-                let inf = await InfPaser.ParseInf(dscPath.fsPath);
-                if (inf && inf.defines) {
-                    let pkgName = inf.defines.get('PLATFORM_NAME');
-                    if (!pkgName) {
-                        pkgName = inf.defines.get('PACKAGE_NAME');
-                        if (!pkgName) {
-                            pkgName = path.basename(uri.fsPath, '.dsc');
-                        }
-                    }
-                    //let pkgGuid = inf.defines.get('PLATFORM_GUID');
-
-                    let def: PackageDefinition = {
-                        name: pkgName,
-                        dscPath: dscPath,
-                        defines: inf.defines,
-                        components: inf.components.map((c) => new ComponentDefinition(vscode.Uri.file(c))),
-                        libraryClasses: inf.libraryClasses.map((cls) => {
-                            let [name, path] = cls.split('|');
-                            if (name && path) {
-                                return new LibraryClassDefinition(vscode.Uri.file(path), name); //, ['IA32','X64']);
-                            }
-                        }),
-                        pcds: inf.pcds.map((pcd) => new PCD(pcd))
-                    };
-
-                    //packageSets[dscParentPath.fsPath] = def;
-                    //packageSets.set(pkgsetName, def);
-                    logger.info(`Discovered DSC: ${pkgName}`);
+                let dsc: IDscData = await DscPaser.Parse(dscPath, this.workspace.uri);
+                if (dsc) {
+                    // if (dsc.errors) {
+                    //     logger.error(`Could not parse DSC: ${dsc.errors}`); // TODO: Verify formatting
+                    //     continue;
+                    // }
+                    logger.info(`Discovered DSC: ${dsc.filePath.fsPath}`);
+                    let def = new DscPackage(dsc);
                     this._onPackageDiscovered.fire(def);
-                }
-                else {
-                    logger.warn(`Invalid DSC: ${dscPath.fsPath}`);
                 }
             }
         } catch (e) {

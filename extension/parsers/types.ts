@@ -6,7 +6,9 @@ export interface InfData {
   pcds: string[];
   guids: string[]; // protocols and guids
   infPath: string;
-
+  defines: Map<string, string>;
+  components: string[];
+  libraryClasses: string[];
 }
 export interface DecData {
   includes: string[];

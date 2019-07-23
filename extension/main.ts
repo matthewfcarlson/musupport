@@ -34,15 +34,16 @@ export class MainClass implements vscode.Disposable {
 
 
     constructor(context: vscode.ExtensionContext) {
+        const workspace = vscode.workspace.workspaceFolders[0]; // TODO: Merge changes to support multiple workspaces
         this.context      = context;
         this.terminal     = new UefiTerminal();
-        this.repoScanner  = new RepoScanner();
+        this.repoScanner  = new RepoScanner(workspace);
         this.projManager  = new ProjectManager(this.repoScanner);
         this.tasks        = new UefiTasks(this.projManager);
         this.commands     = new UefiCommands(this.projManager, this.repoScanner, this.terminal);
-        this.packageTree  = new PackageTreeProvider(vscode.workspace.workspaceFolders[0], this.repoScanner);
-        this.libclsTree   = new LibraryClassProvider(vscode.workspace.workspaceFolders[0], this.repoScanner);
-        this.projectTree  = new ProjectTreeNodeProvider(vscode.workspace.workspaceFolders[0], this.projManager, this.repoScanner);
+        this.packageTree  = new PackageTreeProvider(workspace, this.repoScanner);
+        this.libclsTree   = new LibraryClassProvider(workspace, this.repoScanner);
+        this.projectTree  = new ProjectTreeNodeProvider(workspace, this.projManager, this.repoScanner);
 
         this.disposables.push(
             this.terminal,
@@ -60,7 +61,7 @@ export class MainClass implements vscode.Disposable {
             this.commands.register(this.context);
             this.tasks.register();
             DSC_LSP.activate(this.context);
-	    this.packageTree.register(this.context);
+            this.packageTree.register(this.context);
             this.libclsTree.register(this.context);
             this.projectTree.register();
 

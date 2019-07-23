@@ -1,9 +1,10 @@
 
 
 import * as vscode from 'vscode';
-import { RepoScanner, PackageDefinition, ComponentDefinition, LibraryClassDefinition, PCD } from '../reposcanner';
+import { RepoScanner, PCD } from '../reposcanner';
 import { logger } from '../logger';
 import { LibraryClassNode, Node, LibraryClassCollectionNode } from './models';
+import { LibraryClassStore } from '../parsers/models';
 
 const VIEW_NAMESPACE: string = 'uefiLibClassExplorer';
 
@@ -11,13 +12,13 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
     private _onDidChangeTreeData: vscode.EventEmitter<Node | undefined> = new vscode.EventEmitter<Node | undefined>();
     readonly onDidChangeTreeData: vscode.Event<Node | undefined> = this._onDidChangeTreeData.event;
 
-    private classes: Map<string, Map<string, LibraryClassDefinition>>;
+    private classes: LibraryClassStore;
 
     constructor(
         private workspace: vscode.WorkspaceFolder, 
         private repoScanner: RepoScanner
     ) {
-        this.classes = new Map<string, Map<string, LibraryClassDefinition>>();
+        this.classes = new LibraryClassStore();
     }
 
     public register(context: vscode.ExtensionContext) {
@@ -30,12 +31,7 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
         // Subscribe to package discovery
         this.repoScanner.onPackageDiscovered((pkg) => { 
             for (let cls of pkg.libraryClasses) {
-                if (cls) {
-                    // Add library class to dictionary
-                    let entries = this.classes.get(cls.name) || new Map<string, LibraryClassDefinition>();
-                    entries.set(cls.path.fsPath, cls);
-                    this.classes.set(cls.name, entries);
-                }
+                this.classes.add(cls);
             }
             this.refresh(); 
         });
@@ -64,8 +60,9 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
         }
         else {
             // 1st-level nodes
-            let items = Array.from(this.classes.entries());
-            return Promise.resolve(items.map(([name, classes]) => new LibraryClassCollectionNode(name, Array.from(classes.values())) ));
+            return Promise.resolve(
+                this.classes.getClassesGroupedByName()
+                .map(([name, classes]) => new LibraryClassCollectionNode(name, classes)));
         }
     }
 

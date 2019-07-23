@@ -25,9 +25,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { RepoScanner, PackageDefinition, ComponentDefinition, LibraryClassDefinition, PCD } from '../reposcanner';
+import { RepoScanner, PCD } from '../reposcanner';
 import { logger } from '../logger';
 import { PkgNode, Node } from './models';
+import { DscPackage } from '../parsers/models';
 
 const VIEW_NAMESPACE: string = 'uefiPackageExplorer';
 
@@ -41,7 +42,7 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
 
     private static readonly SELECT_COMMAND: string = `${VIEW_NAMESPACE}.select`;
 
-    private packages: PackageDefinition[];
+    private packages: DscPackage[];
 
     constructor(
         private workspace: vscode.WorkspaceFolder, 
@@ -97,8 +98,8 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
         }
     }
 
-    private navigateToPackageFile(pkg: PackageDefinition) {
-        logger.info(`Selected package: ${pkg.dscPath}`);
-        vscode.window.showTextDocument(pkg.dscPath, { preserveFocus: true });
+    private navigateToPackageFile(pkg: DscPackage) {
+        logger.info(`Selected package: ${pkg.filePath}`);
+        vscode.window.showTextDocument(pkg.filePath, { preserveFocus: true });
     }
 }

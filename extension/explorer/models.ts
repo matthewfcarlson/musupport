@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { RepoScanner, PackageDefinition, ComponentDefinition, LibraryClassDefinition, PCD } from '../reposcanner';
+import { RepoScanner, PCD } from '../reposcanner';
 import { logger } from '../logger';
+import { DscPackage, DscLibraryClass, DscComponent } from '../parsers/models';
 
 export class Node extends vscode.TreeItem {
     constructor(
@@ -31,7 +32,7 @@ export class Node extends vscode.TreeItem {
  */
 export class PkgNode extends Node {
     constructor (
-        public readonly pkg: PackageDefinition,
+        public readonly pkg: DscPackage,
         protected readonly selectCommand: string = null
     ) {
         super(pkg.name, true, selectCommand);
@@ -39,9 +40,9 @@ export class PkgNode extends Node {
 
     contextValue = 'mu-pkg';
 
-    get tooltip() : string { return this.pkg.dscPath.fsPath; }
+    get tooltip() : string { return (this.pkg.filePath) ? this.pkg.filePath.fsPath : null; }
 
-    get description() : string { return path.basename(this.pkg.dscPath.fsPath); }
+    get description() : string { return this.pkg.fileName; }
 
     getChildren() : Thenable<Node[]> {
         let items: Node[] = [];
@@ -57,12 +58,12 @@ export class PkgNode extends Node {
                 this.pkg.components.filter((o) => o).map((o) => new ComponentNode(o))
             ));
         }
-        if (this.pkg.pcds && (this.pkg.pcds.length > 0)) {
-            items.push(new PkgSectionNode(
-                "PCDs", 
-                this.pkg.pcds.filter((o) => o).map((o) => new Node(o.name, false))
-            ));
-        }
+        // if (this.pkg.pcds && (this.pkg.pcds.length > 0)) {
+        //     items.push(new PkgSectionNode(
+        //         "PCDs", 
+        //         this.pkg.pcds.filter((o) => o).map((o) => new Node(o.name, false))
+        //     ));
+        // }
         return Promise.resolve(items);
     }
 }
@@ -86,24 +87,24 @@ export class PkgSectionNode extends Node {
 
 export class LibraryClassNode extends Node {
     constructor(
-        public readonly libraryClass: LibraryClassDefinition,
+        public readonly libraryClass: DscLibraryClass,
         protected readonly selectCommand: string = null
     ) {
         super(libraryClass.name, false, selectCommand);
     }
 
-    get tooltip(): string { return this.libraryClass.path.fsPath; }
+    get tooltip(): string { return (this.libraryClass.filePath) ? this.libraryClass.filePath.fsPath : null; }
 
     get description(): string { 
         // eg. "[IA32,X64]"
-        return (this.libraryClass.arch) ? `[${this.libraryClass.arch.join(',')}]` : null; 
+        return (this.libraryClass.archs) ? `[${this.libraryClass.archs.join(',')}]` : null; 
     }
 }
 
 export class LibraryClassCollectionNode extends Node {
     constructor(
         public readonly name: string,
-        public readonly libraryClasses: LibraryClassDefinition[],
+        public readonly libraryClasses: DscLibraryClass[],
         protected readonly selectCommand: string = null
     ) {
         super(name, true, selectCommand);
@@ -120,10 +121,10 @@ export class LibraryClassCollectionNode extends Node {
 
 export class LibraryClassUsageNode extends Node {
     constructor(
-        public readonly libraryClass: LibraryClassDefinition,
+        public readonly libraryClass: DscLibraryClass,
         protected readonly selectCommand: string = null
     ) {
-        super(libraryClass.path.fsPath, false, selectCommand);
+        super(libraryClass.filePath.fsPath, false, selectCommand);
     }
 
     // TODO: When selected, this should navigate to where the library class is used
@@ -131,18 +132,18 @@ export class LibraryClassUsageNode extends Node {
 
 export class ComponentNode extends Node {
     constructor(
-        public readonly component: ComponentDefinition,
+        public readonly component: DscComponent,
         protected readonly selectCommand: string = null
     ) {
         super(component.name, false, selectCommand);
     }
 
-    get tooltip(): string { return this.component.path.fsPath; }
+    get tooltip(): string { return (this.component.filePath) ? this.component.filePath.fsPath : null; }
 
-    get description(): string { 
-        // eg. "[IA32,X64]"
-        return (this.component.arch) ? `[${this.component.arch.join(',')}]` : null; 
-    }
+    // get description(): string { 
+    //     // eg. "[IA32,X64]"
+    //     return (this.component.archs) ? `[${this.component.arch.join(',')}]` : null; 
+    // }
 }
 
 // /**
