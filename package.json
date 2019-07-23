@@ -277,7 +277,7 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "package": "vsce package",
-        "install": "code --install-extension release/musupport-0.0.5.vsix",
+        "install": "code --install-extension release/musupport-0.0.5.vsix"
     },
     "devDependencies": {
         "@types/node": "^8.10.51",
