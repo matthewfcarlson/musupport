@@ -1,3 +1,4 @@
+# https://edk2-docs.gitbooks.io/edk-ii-dsc-specification/3_edk_ii_dsc_file_format/33_platform_dsc_definition.html
 <EDK_II_DSC> ::= [<Header>]
                  <Defines>
                  [<SkuIds>]

@@ -5,7 +5,7 @@ import { promisifyExists, promisifyGlob, promisifyIsDir, delay, getPackageFromPa
 import { InfPaser } from "../parsers/inf_parser";
 import { DecPaser } from "../parsers/dec_parser";
 import { ExceptionHandler } from "winston";
-import { InfData, DecData } from "./types";
+import { InfData, DecData } from "../parsers/types";
 import { PathLike } from "fs";
 
 /**

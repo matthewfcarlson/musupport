@@ -131,7 +131,9 @@
                 "name": "mu-build",
                 "label": "MuBuild Errors",
                 "owner": "cpp",
-                "fileLocation": ["absolute"],
+                "fileLocation": [
+                    "absolute"
+                ],
                 "pattern": [
                     {
                         "kind": "file",
@@ -151,7 +153,9 @@
                 "name": "mu-build-linker",
                 "label": "MuBuild Linker Errors",
                 "owner": "cpp",
-                "fileLocation": ["absolute"],
+                "fileLocation": [
+                    "absolute"
+                ],
                 "pattern": {
                     "kind": "file",
                     "regexp": "^(?:ERROR|WARNING) - Linker: (?:Error|Warning): ([^(]+).+ : (error|warning) (.*)$",
@@ -164,7 +168,9 @@
                 "name": "mu-build-compile",
                 "label": "MuBuild Compiler Errors",
                 "owner": "cpp",
-                "fileLocation": ["absolute"],
+                "fileLocation": [
+                    "absolute"
+                ],
                 "pattern": {
                     "regexp": "^(?:ERROR|WARNING) - Compile: (?:Error|Warning): ([^(]+)\\((\\d+)\\): (error|warning) (\\w+): (.*)$",
                     "file": 1,
@@ -178,7 +184,9 @@
                 "name": "mu-build-binoutput",
                 "label": "MuBuild Binary Output",
                 "owner": "cpp",
-                "fileLocation": ["absolute"],
+                "fileLocation": [
+                    "absolute"
+                ],
                 "pattern": {
                     "kind": "file",
                     "regexp": "^(INFO) - (Full Flash image written to (.*))$",
@@ -269,7 +277,7 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "package": "vsce package",
-        "install": "code --install-extension release/musupport-0.0.5.vsix"
+        "install": "code --install-extension release/musupport-0.0.5.vsix",
     },
     "devDependencies": {
         "@types/node": "^8.10.51",
