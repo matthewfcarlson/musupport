@@ -1,3 +1,27 @@
+/**
+ * Provides a treeview for exploring UEFI packages in the repository.
+ * 
+ * Example tree layout:
+ * MdePkg
+ *   Library Classes
+ *     BaseLib [IA32,X64]
+ *     BaseMemoryLib [IA32,X64]
+ *   Components
+ *     HelloWorld.inf [DXE,PEI,APP]
+ *     Logo.inf [DXE]
+ *     PciBusDxe.inf [DXE]
+ *   PCDs
+ *     gMyNamespace.myPcd
+ * MdeModulePkg
+ * MyPlatformPkg
+ * 
+ * Clicking on each node will navigate to the component file
+ * Right clicking on a library class, component, or PCD will take you to where it is defined in the DSC.
+ * 
+ * !preprocessor statements in DSCs will not be evaluated,
+ * so !includes will not be traversed, and all paths in an !if block will be shown.
+ */
+
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -112,15 +136,17 @@ export class PkgNode extends Node {
     get description() : string { return path.basename(this.pkg.dscPath.fsPath); }
 
     getChildren() : Thenable<Node[]> {
-        // TODO: Pull from DSC parser...
-        return Promise.resolve(null);
-
-        // return Promise.resolve([
-        //     new ComponentNode("LibraryClasses"),
-        //     new ComponentNode("Components"),
-        //     //new ComponentNode("Components.IA32"),
-        //     //new ComponentNode("Components.X64"),
-        // ]);
+        let items: Node[] = [];
+        if (this.pkg.libraryClasses && (this.pkg.libraryClasses.length > 0)) {
+            items.push(new ComponentNode("LibraryClasses", this.pkg.libraryClasses));
+        }
+        if (this.pkg.components && (this.pkg.components.length > 0)) {
+            items.push(new ComponentNode("Components", this.pkg.components));
+        }
+        if (this.pkg.pcds && (this.pkg.pcds.length > 0)) {
+            items.push(new ComponentNode("PCDs", this.pkg.pcds));
+        }
+        return Promise.resolve(items);
     }
 }
 
@@ -129,19 +155,14 @@ export class PkgNode extends Node {
  */
 export class ComponentNode extends Node {
     constructor(
-        public readonly label: string
+        public readonly label: string,
+        public readonly items: string[]
     ) {
         super(label, true);
     }
 
     getChildren() : Thenable<Node[]> {
-        return Promise.resolve([
-            new InfNode("BaseLib", ["IA32","X64"]),
-            new InfNode("BaseMemoryLib", ["IA32","X64"]),
-            new InfNode("DxeMain", ["IA32","X64"]),
-            new InfNode("PeiCore", ["IA32","X64"]),
-            new InfNode("DebugLib"),
-        ]);
+        return Promise.resolve(this.items.map((item) => new InfNode(item)));
     }
 }
 

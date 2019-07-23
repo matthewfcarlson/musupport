@@ -13,6 +13,8 @@ export class InfPaser {
             packages: [],
             pcds: [],
             guids: [],
+            components: [],
+            libraryClasses: [],
             infPath: infpath
         };
         try {
@@ -43,6 +45,8 @@ export class InfPaser {
             if (rawInfData["Protocols"] != undefined) data.guids = data.guids.concat(rawInfData["Protocols"]);
             if (rawInfData["Guids"] != undefined) data.guids = data.guids.concat(rawInfData["Guids"]);
             if (rawInfData["Pcd"] != undefined) data.pcds = data.pcds.concat(rawInfData["Pcd"]);
+            if (rawInfData["Components"] != undefined) data.components = data.components.concat(rawInfData["Components"]);
+            if (rawInfData["LibraryClasses"] != undefined) data.libraryClasses = data.libraryClasses.concat(rawInfData["LibraryClasses"]);
         }
         catch (err) {
             logger.error("INF_PARSER ERROR", err)

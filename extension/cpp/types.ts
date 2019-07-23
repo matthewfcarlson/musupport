@@ -6,7 +6,8 @@ export interface InfData {
   pcds: string[];
   guids: string[]; // protocols and guids
   infPath: string;
-
+  components: string[];
+  libraryClasses: string[];
 }
 export interface DecData {
   includes: string[];

@@ -7,17 +7,12 @@ import { stringify } from 'querystring';
 import { logger } from './logger';
 import { InfPaser } from './cpp/parsers/inf_parser';
 
-export class PackageSet {
-    rootPath: vscode.Uri;
-    packages: PackageDefinition[];
-}
-
 export class PackageDefinition {
     name: string; // eg. 'MdePkg'
 
     dscPath: vscode.Uri;
 
-    defines: string[];
+    defines: Map<string, string>;
     pcds: string[];
     components: string[];
     libraryClasses: string[];
@@ -50,8 +45,6 @@ export class RepoScanner implements vscode.Disposable {
             return null;
         }
 
-        //let packageSets: Map<string, PackageDefinition> = new Map<string, PackageDefinition>();
-        
         for (let uri of dscFiles) {
             let dscPath = uri;
             let dscName = path.basename(uri.fsPath);
@@ -72,10 +65,10 @@ export class RepoScanner implements vscode.Disposable {
                 let def: PackageDefinition = {
                     name: pkgName,
                     dscPath: dscPath,
-                    defines: [],
-                    components: [],
-                    libraryClasses: [],
-                    pcds: []
+                    defines: inf.defines,
+                    components: inf.components.map((c) => path.basename(c)),
+                    libraryClasses: inf.libraryClasses.map((cls) => cls.split('|')[0]),
+                    pcds: inf.pcds
                 };
 
                 //packageSets[dscParentPath.fsPath] = def;
@@ -87,11 +80,6 @@ export class RepoScanner implements vscode.Disposable {
                 logger.warn(`Invalid DSC: ${dscPath.fsPath}`);
             }
         }
-
-        // for (let [item, def] of packageSets.entries()) {
-        //     logger.info(`Discovered package set: ${item}`);
-        //     this._onPackageDiscovered.fire(def);
-        // }
     }
 
     /*
