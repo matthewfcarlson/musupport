@@ -15,6 +15,7 @@ import { PackageTreeProvider } from './explorer/pkgexplorer';
 import { ProjectTreeNodeProvider } from './explorer/projtree';
 import * as exec from './exec';
 import { LibraryClassProvider } from './explorer/libexplorer';
+import * as DSC_LSP from './dsc/DSC';
 
 let main: MainClass = undefined;
 
@@ -58,7 +59,8 @@ export class MainClass implements vscode.Disposable {
         try {
             this.commands.register(this.context);
             this.tasks.register();
-            this.packageTree.register(this.context);
+            DSC_LSP.activate(this.context);
+	    this.packageTree.register(this.context);
             this.libclsTree.register(this.context);
             this.projectTree.register();
 

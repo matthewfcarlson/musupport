@@ -1,6 +1,6 @@
-import { promisifyReadFile, stringTrim } from "../../utilities";
-import { logger } from "../../logger";
-import { DecData } from "../types";
+import { promisifyReadFile, stringTrim } from "../utilities";
+import { logger } from "../logger";
+import { DecData } from "./types";
 import * as path from 'path';
 
 export class DecPaser {
