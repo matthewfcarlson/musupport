@@ -44,15 +44,15 @@
         "views": {
             "uefiExplorerContainer": [
                 {
-                    "id": "uefiExplorer",
-                    "name": "UEFI Explorer"
+                    "id": "uefiPackageExplorer",
+                    "name": "Packages"
                 }
             ],
             "explorer": [
                 {
-					"id": "uefiProjects",
-					"name": "UEFI Projects"
-				}
+                    "id": "uefiProjects",
+                    "name": "UEFI Projects"
+                }
             ]
         },
         "commands": [

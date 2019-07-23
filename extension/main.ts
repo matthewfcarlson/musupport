@@ -11,7 +11,7 @@ import { RepoScanner } from './reposcanner';
 import { ProjectManager } from './projectmanager';
 import { UefiTerminal } from './terminal';
 import { UefiCommands } from './commands';
-import { PackageTreeProvider } from './activityview';
+import { PackageTreeProvider } from './pkgexplorer';
 import { ProjectTreeNodeProvider } from './projtree';
 import * as exec from './exec';
 

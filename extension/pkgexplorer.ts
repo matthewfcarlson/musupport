@@ -3,6 +3,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { RepoScanner, PackageDefinition } from './reposcanner';
 
+/**
+ * Provides a treeview for exploring UEFI packages.
+ * Packages are discovered by the RepoScanner class.
+ */
 export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
     private _onDidChangeTreeData: vscode.EventEmitter<Node | undefined> = new vscode.EventEmitter<Node | undefined>();
     readonly onDidChangeTreeData: vscode.Event<Node | undefined> = this._onDidChangeTreeData.event;
@@ -15,7 +19,7 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
     ) { }
 
     public register(context: vscode.ExtensionContext) {
-        const view = vscode.window.createTreeView('uefiExplorer', {
+        const view = vscode.window.createTreeView('uefiPackageExplorer', {
             treeDataProvider: this
         });
 
@@ -44,13 +48,7 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
             return element.getChildren();
         }
         else {
-            // let items = [
-            //     new PkgNode("MdePkg"),
-            //     new PkgNode("MdeModulePkg"),
-            //     new PkgNode("MsSurfaceModulePkg"),
-            //     new PkgNode("MsSurfaceIntelPkg"),
-            // ];
-            //return Promise.resolve(items);
+            // 1st-level nodes
             return Promise.resolve(this.packages.map((pkg) => new PkgNode(pkg) ));
         }
     }
