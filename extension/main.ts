@@ -11,9 +11,10 @@ import { RepoScanner } from './reposcanner';
 import { ProjectManager } from './projectmanager';
 import { UefiTerminal } from './terminal';
 import { UefiCommands } from './commands';
-import { PackageTreeProvider } from './pkgexplorer';
-import { ProjectTreeNodeProvider } from './projtree';
+import { PackageTreeProvider } from './explorer/pkgexplorer';
+import { ProjectTreeNodeProvider } from './explorer/projtree';
 import * as exec from './exec';
+import { LibraryClassProvider } from './explorer/libexplorer';
 
 let main: MainClass = undefined;
 
@@ -28,6 +29,7 @@ export class MainClass implements vscode.Disposable {
     commands:    UefiCommands;
     packageTree: PackageTreeProvider;
     projectTree: ProjectTreeNodeProvider;
+    libclsTree:  LibraryClassProvider;
 
 
     constructor(context: vscode.ExtensionContext) {
@@ -38,6 +40,7 @@ export class MainClass implements vscode.Disposable {
         this.tasks        = new UefiTasks(this.projManager);
         this.commands     = new UefiCommands(this.projManager, this.repoScanner, this.terminal);
         this.packageTree  = new PackageTreeProvider(vscode.workspace.workspaceFolders[0], this.repoScanner);
+        this.libclsTree   = new LibraryClassProvider(vscode.workspace.workspaceFolders[0], this.repoScanner);
         this.projectTree  = new ProjectTreeNodeProvider(vscode.workspace.workspaceFolders[0], this.projManager, this.repoScanner);
 
         this.disposables.push(
@@ -56,6 +59,7 @@ export class MainClass implements vscode.Disposable {
             this.commands.register(this.context);
             this.tasks.register();
             this.packageTree.register(this.context);
+            this.libclsTree.register(this.context);
             this.projectTree.register();
 
             let scanCommand = this.commands.executeCommand('musupport.scan');

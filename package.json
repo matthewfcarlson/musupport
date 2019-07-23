@@ -46,6 +46,10 @@
                 {
                     "id": "uefiPackageExplorer",
                     "name": "Packages"
+                },
+                {
+                    "id": "uefiLibClassExplorer",
+                    "name": "Library Classes"
                 }
             ],
             "explorer": [

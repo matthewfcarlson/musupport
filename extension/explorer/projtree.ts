@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { ProjectManager, ProjectDefinition } from './projectmanager';
-import { RepoScanner } from './reposcanner';
+import { ProjectManager, ProjectDefinition } from '../projectmanager';
+import { RepoScanner } from '../reposcanner';
 
 export class ProjectTreeNodeProvider implements vscode.TreeDataProvider<ProjectTreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<ProjectTreeItem | undefined> = new vscode.EventEmitter<ProjectTreeItem | undefined>();
