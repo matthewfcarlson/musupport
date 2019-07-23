@@ -1,5 +1,6 @@
 
 export interface InfData {
+  defines: Map<string, string>;
   sources: string[];
   packages: string[];
   pcds: string[];

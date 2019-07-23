@@ -8,6 +8,7 @@ export class InfPaser {
         // Join continued lines
 
         var data: InfData = {
+            defines: null,
             sources: [],
             packages: [],
             pcds: [],
@@ -36,6 +37,7 @@ export class InfPaser {
             }
             //logger.info("INF_PARSER", rawInfData);
             //process rawInfData
+            if (rawInfData["Defines"] != undefined) data.defines = this.parseMap(rawInfData["Defines"]);
             if (rawInfData["Sources"] != undefined) data.sources = data.sources.concat(rawInfData["Sources"]);
             if (rawInfData["Packages"] != undefined) data.packages = data.packages.concat(rawInfData["Packages"]);
             if (rawInfData["Protocols"] != undefined) data.guids = data.guids.concat(rawInfData["Protocols"]);
@@ -52,5 +54,23 @@ export class InfPaser {
         data.sources = data.sources.map(x => path.join(infDirPath, x))
 
         return data;
+    }
+
+    private static parseMap(lines: string[]) : Map<string, string> {
+        let map: Map<string, string> = new Map<string, string>();
+
+        for (let ln of lines) {
+            if (ln) {
+                if (ln.startsWith('DEFINE ')) {
+                    ln = ln.substr(0, 7);
+                }
+
+                let tokens = ln.split('=');
+                if (tokens.length == 2) {
+                    map.set(tokens[0].trim(), tokens[1].trim());
+                }
+            }
+        }
+        return map;
     }
 }

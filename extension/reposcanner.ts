@@ -5,6 +5,23 @@ import * as utils from './utilities';
 import { ProjectDefinition, ProjectManager } from './projectmanager';
 import { stringify } from 'querystring';
 import { logger } from './logger';
+import { InfPaser } from './cpp/parsers/inf_parser';
+
+export class PackageSet {
+    rootPath: vscode.Uri;
+    packages: PackageDefinition[];
+}
+
+export class PackageDefinition {
+    name: string; // eg. 'MdePkg'
+
+    dscPath: vscode.Uri;
+
+    defines: string[];
+    pcds: string[];
+    components: string[];
+    libraryClasses: string[];
+}
 
 /*
     The RepoScanner class is responsible for scanning the repository for projects and other information.
@@ -14,6 +31,9 @@ export class RepoScanner implements vscode.Disposable {
     private readonly _onProjectDiscovered: vscode.EventEmitter<ProjectDefinition> = new vscode.EventEmitter<ProjectDefinition>();
     public  readonly  onProjectDiscovered: vscode.Event<ProjectDefinition>        = this._onProjectDiscovered.event;
 
+    private readonly _onPackageDiscovered: vscode.EventEmitter<PackageDefinition> = new vscode.EventEmitter<PackageDefinition>();
+    public  readonly  onPackageDiscovered: vscode.Event<PackageDefinition>        = this._onPackageDiscovered.event;
+
     constructor() {
     }
 
@@ -21,12 +41,65 @@ export class RepoScanner implements vscode.Disposable {
         this._onProjectDiscovered.dispose();
     }
 
+    async scanForPackages() {
+        // TODO: If project is selected, filter search path to only those that the project references.
+
+        // Find all DSC files in the workspace that match the specified glob
+        var dscFiles = await vscode.workspace.findFiles(`**/*.dsc`); // TODO: Better path handling
+        if (!dscFiles) {
+            return null;
+        }
+
+        //let packageSets: Map<string, PackageDefinition> = new Map<string, PackageDefinition>();
+        
+        for (let uri of dscFiles) {
+            let dscPath = uri;
+            let dscName = path.basename(uri.fsPath);
+            let dscParentPath = vscode.Uri.file(path.dirname(uri.fsPath));
+            let pkgsetName = path.basename(dscParentPath.fsPath);
+
+            let inf = await InfPaser.ParseInf(dscPath.fsPath);
+            if (inf && inf.defines) {
+                let pkgName = inf.defines.get('PLATFORM_NAME');
+                if (!pkgName) {
+                    pkgName = inf.defines.get('PACKAGE_NAME');
+                    if (!pkgName) {
+                        pkgName = path.basename(uri.fsPath, '.dsc');
+                    }
+                }
+                //let pkgGuid = inf.defines.get('PLATFORM_GUID');
+
+                let def: PackageDefinition = {
+                    name: pkgName,
+                    dscPath: dscPath,
+                    defines: [],
+                    components: [],
+                    libraryClasses: [],
+                    pcds: []
+                };
+
+                //packageSets[dscParentPath.fsPath] = def;
+                //packageSets.set(pkgsetName, def);
+                logger.info(`Discovered DSC: ${pkgName}`);
+                this._onPackageDiscovered.fire(def);
+            }
+            else {
+                logger.warn(`Invalid DSC: ${dscPath.fsPath}`);
+            }
+        }
+
+        // for (let [item, def] of packageSets.entries()) {
+        //     logger.info(`Discovered package set: ${item}`);
+        //     this._onPackageDiscovered.fire(def);
+        // }
+    }
+
     /*
         Scan the workspace for projects, as defined by musupport.platformDsc glob pattern.
         A project must have a DSC file, and may optionally have a PlatformBuild.py build script.
         If the PlatformBuild.py build script is not present, functionality will be limited.
     */
-   async scanForProjects(): Promise<ProjectDefinition[]> {
+    async scanForProjects(): Promise<ProjectDefinition[]> {
         const config = vscode.workspace.getConfiguration(null, null);
         const platformDsc: string = config.get('musupport.platformDsc');
         if (!platformDsc) {

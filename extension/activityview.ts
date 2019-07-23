@@ -1,12 +1,30 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { RepoScanner, PackageDefinition } from './reposcanner';
 
-export class MuNodeProvider implements vscode.TreeDataProvider<Node> {
+export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
     private _onDidChangeTreeData: vscode.EventEmitter<Node | undefined> = new vscode.EventEmitter<Node | undefined>();
     readonly onDidChangeTreeData: vscode.Event<Node | undefined> = this._onDidChangeTreeData.event;
-    
-    constructor(private workspace: vscode.WorkspaceFolder) { }
+
+    private packages: PackageDefinition[];
+
+    constructor(
+        private workspace: vscode.WorkspaceFolder, 
+        private repoScanner: RepoScanner
+    ) { }
+
+    public register(context: vscode.ExtensionContext) {
+        const view = vscode.window.createTreeView('uefiExplorer', {
+            treeDataProvider: this
+        });
+
+        this.packages = [];
+        this.repoScanner.onPackageDiscovered((pkg) => { 
+            this.packages.push(pkg);
+            this.refresh(); 
+        });
+    }
 
     refresh(): void {
         this._onDidChangeTreeData.fire();
@@ -26,13 +44,14 @@ export class MuNodeProvider implements vscode.TreeDataProvider<Node> {
             return element.getChildren();
         }
         else {
-            let items = [
-                new PkgNode("MdePkg"),
-                new PkgNode("MdeModulePkg"),
-                new PkgNode("MsSurfaceModulePkg"),
-                new PkgNode("MsSurfaceIntelPkg"),
-            ];
-            return Promise.resolve(items);
+            // let items = [
+            //     new PkgNode("MdePkg"),
+            //     new PkgNode("MdeModulePkg"),
+            //     new PkgNode("MsSurfaceModulePkg"),
+            //     new PkgNode("MsSurfaceIntelPkg"),
+            // ];
+            //return Promise.resolve(items);
+            return Promise.resolve(this.packages.map((pkg) => new PkgNode(pkg) ));
         }
     }
 }
@@ -55,24 +74,27 @@ abstract class Node extends vscode.TreeItem {
  */
 export class PkgNode extends Node {
     constructor (
-        public readonly label: string
+        private readonly pkg: PackageDefinition
     ) {
-        super(label, true);
+        super(pkg.name, true);
     }
 
     contextValue = 'mu-pkg';
 
-    get tooltip() : string { return null; }
+    get tooltip() : string { return this.pkg.dscPath.fsPath; }
 
-    get description() : string { return null; }
+    get description() : string { return path.basename(this.pkg.dscPath.fsPath); }
 
     getChildren() : Thenable<Node[]> {
-        return Promise.resolve([
-            new ComponentNode("LibraryClasses"),
-            new ComponentNode("Components"),
-            //new ComponentNode("Components.IA32"),
-            //new ComponentNode("Components.X64"),
-        ]);
+        // TODO: Pull from DSC parser...
+        return Promise.resolve(null);
+
+        // return Promise.resolve([
+        //     new ComponentNode("LibraryClasses"),
+        //     new ComponentNode("Components"),
+        //     //new ComponentNode("Components.IA32"),
+        //     //new ComponentNode("Components.X64"),
+        // ]);
     }
 }
 
@@ -113,53 +135,4 @@ export class InfNode extends Node {
     }
 
     contextValue = 'mu-inf';
-}
-
-
-
-export class Dependency extends vscode.TreeItem {
-
-    constructor(
-        public readonly label: string,
-        private version: string,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly command?: vscode.Command
-    ) {
-        super(label, collapsibleState);
-    }
-
-    get tooltip(): string {
-        return `${this.label}-${this.version}`;
-    }
-
-    get description(): string {
-        return this.version;
-    }
-
-    // iconPath = {
-    // 	light: path.join(__filename, '..', '..', 'resources', 'light', 'dependency.svg'),
-    // 	dark: path.join(__filename, '..', '..', 'resources', 'dark', 'dependency.svg')
-    // };
-
-    contextValue = 'dependency';
-
-}
-
-export class ActivityView implements vscode.Disposable {
-    private workspace: vscode.WorkspaceFolder;
-
-    constructor(workspace: vscode.WorkspaceFolder) {
-        this.workspace = workspace;
-    }
-
-    dispose() {
-    }
-
-    public register(context: vscode.ExtensionContext) {
-        const treeProvider = new MuNodeProvider(this.workspace);
-        
-        const view = vscode.window.createTreeView('uefiExplorer', {
-            treeDataProvider: treeProvider
-        });
-    }
 }
