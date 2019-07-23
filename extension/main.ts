@@ -26,7 +26,7 @@ export class MainClass implements vscode.Disposable {
     tasks:       UefiTasks;
     terminal:    UefiTerminal;
     commands:    UefiCommands;
-    views:       ActivityView;
+    view:       ActivityView;
     projectTree: ProjectTreeNodeProvider;
 
 
@@ -37,7 +37,7 @@ export class MainClass implements vscode.Disposable {
         this.projManager  = new ProjectManager(this.repoScanner);
         this.tasks        = new UefiTasks(this.projManager);
         this.commands     = new UefiCommands(this.projManager, this.repoScanner, this.terminal);
-        this.views        = new ActivityView(vscode.workspace.workspaceFolders[0]);
+        this.view         = new ActivityView(vscode.workspace.workspaceFolders[0]);
         this.projectTree  = new ProjectTreeNodeProvider(vscode.workspace.workspaceFolders[0], this.projManager, this.repoScanner);
 
         this.disposables.push(
@@ -46,7 +46,7 @@ export class MainClass implements vscode.Disposable {
             this.repoScanner,
             this.projManager,
             this.commands,
-            this.views
+            this.view
         );
     }
 
@@ -56,7 +56,7 @@ export class MainClass implements vscode.Disposable {
         try {
             this.commands.register(this.context);
             this.tasks.register();
-            this.views.register(this.context);
+            this.view.register(this.context);
             this.projectTree.register();
 
             let scanCommand = this.commands.executeCommand('musupport.scan');
