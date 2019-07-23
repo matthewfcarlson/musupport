@@ -95,10 +95,10 @@ export class LibraryClassNode extends Node {
 
     get tooltip(): string { return (this.libraryClass.filePath) ? this.libraryClass.filePath.fsPath : null; }
 
-    get description(): string { 
-        // eg. "[IA32,X64]"
-        return (this.libraryClass.archs) ? `[${this.libraryClass.archs.join(',')}]` : null; 
-    }
+    // get description(): string { 
+    //     // eg. "[IA32,X64]"
+    //     return (this.libraryClass.archs) ? `[${this.libraryClass.archs.join(',')}]` : null; 
+    // }
 }
 
 export class LibraryClassCollectionNode extends Node {

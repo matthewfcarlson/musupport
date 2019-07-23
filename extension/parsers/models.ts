@@ -66,9 +66,24 @@ export class DscPackage {
         this.data = data;
         this.extendedData = extendedData;
 
-        // TODO: Derive from DEFINES
-        if (data && data.filePath) {
-            this.name = path.basename(data.filePath.fsPath);
+        if (data) {
+            if (this.data.defines) {
+                let def = this.data.defines.get('PLATFORM_NAME');
+                if (def) { this.name = def.toString(); }
+
+                if (!this.name) {
+                    let def = this.data.defines.get('PROJECT_NAME');
+                    if (def) { this.name = def.toString(); }
+                }
+            }
+            
+            if (!this.name && this.data.filePath) {
+                this.name = path.basename(data.filePath.fsPath);
+            }
+            
+            if (!this.name) {
+                throw new Error(`Could not find name for DSC`);
+            }
         }
     }
 }

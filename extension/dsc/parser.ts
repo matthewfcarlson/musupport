@@ -152,10 +152,10 @@ export class DscPaser {
           break;
         }
         //TODO: add more of the section
-        if (current)
-        else {
+        // if (current)
+        // else {
 
-        }
+        // }
       }
     }
     return data;
@@ -191,7 +191,7 @@ export class DscPaser {
         components: components,
         libraries: libraries,
         pcds: null,
-        defines: null
+        defines: inf.defines
       }
       return dsc;
     }

@@ -68,7 +68,8 @@ export class RepoScanner implements vscode.Disposable {
                 }
             }
         } catch (e) {
-            logger.error('ERROR SCANNING FOR PACKAGES');
+            logger.error(`Error scanning packages: ${e}`, e);
+            throw e;
         }
     }
 
