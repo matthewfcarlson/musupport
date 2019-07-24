@@ -8,10 +8,13 @@ export class InfPaser {
         // Join continued lines
 
         var data: InfData = {
+            defines: null,
             sources: [],
             packages: [],
             pcds: [],
             guids: [],
+            components: [],
+            libraryClasses: [],
             infPath: infpath
         };
         try {
@@ -36,11 +39,14 @@ export class InfPaser {
             }
             //logger.info("INF_PARSER", rawInfData);
             //process rawInfData
+            if (rawInfData["Defines"] != undefined) data.defines = this.parseMap(rawInfData["Defines"]);
             if (rawInfData["Sources"] != undefined) data.sources = data.sources.concat(rawInfData["Sources"]);
             if (rawInfData["Packages"] != undefined) data.packages = data.packages.concat(rawInfData["Packages"]);
             if (rawInfData["Protocols"] != undefined) data.guids = data.guids.concat(rawInfData["Protocols"]);
             if (rawInfData["Guids"] != undefined) data.guids = data.guids.concat(rawInfData["Guids"]);
             if (rawInfData["Pcd"] != undefined) data.pcds = data.pcds.concat(rawInfData["Pcd"]);
+            if (rawInfData["Components"] != undefined) data.components = data.components.concat(this.parseComponent(rawInfData["Components"]));
+            if (rawInfData["LibraryClasses"] != undefined) data.libraryClasses = data.libraryClasses.concat(rawInfData["LibraryClasses"]);
         }
         catch (err) {
             logger.error("INF_PARSER ERROR", err)
@@ -52,5 +58,35 @@ export class InfPaser {
         data.sources = data.sources.map(x => path.join(infDirPath, x))
 
         return data;
+    }
+
+    private static parseMap(lines: string[]) : Map<string, string> {
+        let map: Map<string, string> = new Map<string, string>();
+
+        for (let ln of lines) {
+            if (ln) {
+                if (ln.startsWith('DEFINE ')) {
+                    ln = ln.substr(0, 7);
+                }
+
+                let tokens = ln.split('=');
+                if (tokens.length == 2) {
+                    map.set(tokens[0].trim(), tokens[1].trim());
+                }
+            }
+        }
+        return map;
+    }
+
+    private static parseComponent(comp: string[]) {
+        // HACK: Remove lines that don't look like component definitions (eg. preprocessor syntax, library overrides)
+        let re = new RegExp('^[\\w/\\\\]+\\.inf');
+        return comp.map((c) => {
+            let results = re.exec(c);
+            if (results && results.length >= 1) {
+                return results[0];
+            }
+            return null;
+        }).filter((c) => (c != null));
     }
 }

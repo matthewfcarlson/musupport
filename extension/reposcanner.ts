@@ -5,6 +5,18 @@ import * as utils from './utilities';
 import { ProjectDefinition, ProjectManager } from './projectmanager';
 import { stringify } from 'querystring';
 import { logger } from './logger';
+import { InfData, DecData, IDscDataExtended, IDscData, IDscComponent, DscArch, ISourceInfo, DscLibClass } from "./parsers/types";
+import { DscPaser } from './dsc/parser';
+import { DscPackage } from './parsers/models';
+
+/***
+ * Represents a PCD entry in a DSC
+ */
+export class PCD {
+    // TODO: Namespace, Name, Value
+    constructor(public name: string) { }
+}
+
 
 /*
     The RepoScanner class is responsible for scanning the repository for projects and other information.
@@ -14,11 +26,51 @@ export class RepoScanner implements vscode.Disposable {
     private readonly _onProjectDiscovered: vscode.EventEmitter<ProjectDefinition> = new vscode.EventEmitter<ProjectDefinition>();
     public  readonly  onProjectDiscovered: vscode.Event<ProjectDefinition>        = this._onProjectDiscovered.event;
 
-    constructor() {
+    private readonly _onPackageDiscovered: vscode.EventEmitter<DscPackage> = new vscode.EventEmitter<DscPackage>();
+    public  readonly  onPackageDiscovered: vscode.Event<DscPackage>        = this._onPackageDiscovered.event;
+
+    // public projects: ProjectDefinition[];
+    // public packages: DscPackage[];
+    // public components: ComponentDefinition[];
+    // public libraryClasses: LibraryClassDefinition[];
+
+    constructor(private readonly workspace: vscode.WorkspaceFolder) {
     }
 
     dispose() {
         this._onProjectDiscovered.dispose();
+    }
+
+    async scanForPackages() {
+        try {
+            // TODO: If project is selected, filter search path to only those that the project references.
+
+            // Find all DSC files in the workspace that match the specified glob
+            var dscFiles = await vscode.workspace.findFiles(`**/*.dsc`); // TODO: Better path handling
+            if (!dscFiles) {
+                return null;
+            }
+
+            for (let uri of dscFiles) {
+                let def: DscPackage;
+                let dscPath = uri;
+                let dscParentPath = vscode.Uri.file(path.dirname(uri.fsPath));
+
+                let dsc: IDscData = await DscPaser.Parse(dscPath, this.workspace.uri);
+                if (dsc) {
+                    // if (dsc.errors) {
+                    //     logger.error(`Could not parse DSC: ${dsc.errors}`); // TODO: Verify formatting
+                    //     continue;
+                    // }
+                    logger.info(`Discovered DSC: ${dsc.filePath.fsPath}`);
+                    let def = new DscPackage(dsc);
+                    this._onPackageDiscovered.fire(def);
+                }
+            }
+        } catch (e) {
+            logger.error(`Error scanning packages: ${e}`, e);
+            throw e;
+        }
     }
 
     /*
@@ -26,7 +78,7 @@ export class RepoScanner implements vscode.Disposable {
         A project must have a DSC file, and may optionally have a PlatformBuild.py build script.
         If the PlatformBuild.py build script is not present, functionality will be limited.
     */
-   async scanForProjects(): Promise<ProjectDefinition[]> {
+    async scanForProjects(): Promise<ProjectDefinition[]> {
         const config = vscode.workspace.getConfiguration(null, null);
         const platformDsc: string = config.get('musupport.platformDsc');
         if (!platformDsc) {

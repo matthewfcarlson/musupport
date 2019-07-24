@@ -250,4 +250,8 @@ export class ProjectManager implements vscode.Disposable {
     getAvailableConfigs(): string[] {
         return this.availableConfigs;
     }
+
+    getAvailableProjects(): ProjectDefinition[] { 
+        return this.availableProjects;
+    }
 }

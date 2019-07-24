@@ -6,6 +6,7 @@ import { Uri } from 'vscode';
 import { PathLike } from 'fs';
 import { ErrorCodes } from 'vscode-jsonrpc';
 import * as vscode from 'vscode';
+import { InfPaser } from '../parsers/inf_parser';
 
 // Parses a DSC file, including !include
 
@@ -225,7 +226,39 @@ export class DscPaser {
   
   public static async Parse(dscpath: Uri, workspacePath: Uri): Promise<IDscData> {
     //TODO eventually write a second reduced parser. For now, just do a full parse and trim it down
-    return (await this.ParseFull(dscpath, workspacePath)).toDscData();
+    //return (await this.ParseFull(dscpath, workspacePath)).toDscData();
+
+    // HACKY INF PARSER
+    let inf = await InfPaser.ParseInf(dscpath.fsPath);
+    if (inf && inf.defines) {
+
+      // Flattened list of components
+      let components = new Map<String, String[]>();
+      components.set('UNKNOWN', inf.components);
+
+      // Flattened list of library classes
+      let libraries = new Map<String, Map<String, String>>();
+      let librariesInner = new Map<String, String>();
+      for (let lib of inf.libraryClasses) {
+        let [name, path] = lib.split('|');
+        if (name) { name = name.trim(); }
+        if (path) { path = path.trim(); }
+        if (name && path) {
+          librariesInner.set(name, path);
+        }
+      }
+      libraries.set('UNKNOWN', librariesInner);
+
+      let dsc: IDscData = {
+        filePath: dscpath,
+        components: components,
+        libraries: libraries,
+        pcds: null,
+        defines: inf.defines
+      }
+      return dsc;
+    }
+    return null;
   }
    
 }   

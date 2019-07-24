@@ -81,6 +81,9 @@ export class UefiCommands implements vscode.Disposable {
             location: vscode.ProgressLocation.Window,
             title: 'Scanning for UEFI projects...'
         }, async (p, t) => {
+            // TODO: This might belong in a different scan command?
+            await this.repoScanner.scanForPackages();
+
             let projects = await this.repoScanner.scanForProjects();
             if (projects && projects.length > 0) {
                 logger.info(`Discovered ${projects.length} projects`);

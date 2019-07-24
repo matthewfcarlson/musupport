@@ -21,6 +21,7 @@
         "thog.vscode-asl"
     ],
     "activationEvents": [
+        "onView:uefiExplorer",
         "workspaceContains:Build/BUILDLOG.txt",
         "onLanguage:c",
         "onLanguage:h",
@@ -32,6 +33,33 @@
     ],
     "main": "./out/main.js",
     "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "uefiExplorerContainer",
+                    "title": "UEFI Explorer",
+                    "icon": "media/uefi.svg"
+                }
+            ]
+        },
+        "views": {
+            "uefiExplorerContainer": [
+                {
+                    "id": "uefiPackageExplorer",
+                    "name": "Packages"
+                },
+                {
+                    "id": "uefiLibClassExplorer",
+                    "name": "Library Classes"
+                }
+            ],
+            "explorer": [
+                {
+                    "id": "uefiProjects",
+                    "name": "UEFI Projects"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "extension.helloWorld",
@@ -72,6 +100,7 @@
                     "default": false,
                     "description": "Provides a Cpp Provider to the system."
                 },
+
                 "musupport.platformDsc": {
                     "type": "string",
                     "default": "PlatformPkg.dsc",

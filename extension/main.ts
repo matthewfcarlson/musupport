@@ -11,7 +11,10 @@ import { RepoScanner } from './reposcanner';
 import { ProjectManager } from './projectmanager';
 import { UefiTerminal } from './terminal';
 import { UefiCommands } from './commands';
+import { PackageTreeProvider } from './explorer/pkgexplorer';
+import { ProjectTreeNodeProvider } from './explorer/projtree';
 import * as exec from './exec';
+import { LibraryClassProvider } from './explorer/libexplorer';
 import * as DSC_LSP from './dsc/DSC';
 
 let main: MainClass = undefined;
@@ -25,15 +28,22 @@ export class MainClass implements vscode.Disposable {
     tasks:       UefiTasks;
     terminal:    UefiTerminal;
     commands:    UefiCommands;
+    packageTree: PackageTreeProvider;
+    projectTree: ProjectTreeNodeProvider;
+    libclsTree:  LibraryClassProvider;
 
 
     constructor(context: vscode.ExtensionContext) {
+        const workspace = vscode.workspace.workspaceFolders[0]; // TODO: Merge changes to support multiple workspaces
         this.context      = context;
         this.terminal     = new UefiTerminal();
-        this.repoScanner  = new RepoScanner();
+        this.repoScanner  = new RepoScanner(workspace);
         this.projManager  = new ProjectManager(this.repoScanner);
         this.tasks        = new UefiTasks(this.projManager);
         this.commands     = new UefiCommands(this.projManager, this.repoScanner, this.terminal);
+        this.packageTree  = new PackageTreeProvider(workspace, this.repoScanner);
+        this.libclsTree   = new LibraryClassProvider(workspace, this.repoScanner);
+        this.projectTree  = new ProjectTreeNodeProvider(workspace, this.projManager, this.repoScanner);
 
         this.disposables.push(
             this.terminal,
@@ -51,9 +61,14 @@ export class MainClass implements vscode.Disposable {
             this.commands.register(this.context);
             this.tasks.register();
             DSC_LSP.activate(this.context);
+            this.packageTree.register(this.context);
+            this.libclsTree.register(this.context);
+            this.projectTree.register();
 
             let scanCommand = this.commands.executeCommand('musupport.scan');
             // TODO: On scan completion load or update the C/C++ extension
+
+            this.projectTree.refresh();
 
             logger.info('Extension ready!');
         }
