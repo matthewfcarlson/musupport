@@ -108,16 +108,11 @@ export class LibraryClassNode extends Node {
 
     get tooltip(): string { return `${this.libraryClass.filePath}`; }
 
-    // get description(): string { 
-    //     // eg. "[IA32,X64]"
-    //     return (this.libraryClass.archs) ? `[${this.libraryClass.archs.join(',')}]` : null; 
-    // }
-
     get description(): string {
         if (this.libraryClass.package) {
             return this.libraryClass.package.name;
         }
-        return null;
+        return null; // If null, the package isn't used, or usage wasn't detected properly.
     }
 
     selected() {

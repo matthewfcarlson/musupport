@@ -274,4 +274,12 @@ export class Path extends String {
   join(other: Path): Path {
     return new Path(path.join(this.toString(), other.toString()));
   }
+
+  replaceExtension(newExt: string) {
+    let s = this.toString();
+    let ext = path.extname(s);
+    if (ext) { s = s.substr(0, s.length - ext.length); }
+    s += newExt;
+    return new Path(s);
+  }
 }

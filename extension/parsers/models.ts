@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { IDscData, IDscDataExtended, IComponent, IDscLibClass, InfData } from "./types";
+import { IDscData, IDscDataExtended, IComponent, IDscLibClass, InfData, DecData, DscPcdType } from "./types";
 import * as utils from '../utilities';
 import { Path } from '../utilities';
 import { InfPaser } from './inf_parser';
 import { logger } from '../logger';
 import { LibraryStore, InfStore } from '../data_store';
 import { DscPaser } from '../dsc/parser';
+import { DecPaser } from './dec_parser';
 
 /***
  * Represents a DEC/DSC package
@@ -16,8 +17,10 @@ export class Package {
     private workspace: vscode.WorkspaceFolder;
 
     name: string;
-    data: IDscData;
-    extendedData: IDscDataExtended;
+    dec: DecData;
+    dsc: IDscData;
+    dscExtended: IDscDataExtended;
+    isProject: boolean;
 
     // Libraries contained within this package (not necessarily referenced in the DSC or DEC)
     libraries: LibraryStore;
@@ -28,19 +31,22 @@ export class Package {
     // Libraries built by this package's DSC file
     //includedLibraries: Library[];
 
+    get dscFilePath(): Path { return (this.dsc) ? new Path(this.dsc.filePath) : null; }
+    get decFilePath(): Path { return (this.dec) ? new Path(this.dec.infPath) : null; }
+
+    get filePath(): Path { return this.decFilePath; }
     get fileName(): string { return (this.filePath) ? this.filePath.basename : null; }
-    get filePath(): Path { return (this.data) ? new Path(this.data.filePath.fsPath) : null; }
     get packageRoot(): Path { return (this.filePath) ? this.filePath.parent : null; }
 
     /**
      * Returns a flattened list of components referenced in the DSC.
      */
     get components(): Component[] { 
-        if (this.data && this.data.components) {
+        if (this.dec && this.dec.components) {
             let items: Component[] = [];
 
             // Iterate over each architecture
-            for (let [arch, components] of this.data.components.entries()) {
+            for (let [arch, components] of this.dec.components.entries()) {
                 for (let component of components) {
                     // TODO: Will need to parse the INF component??
                     let comp: IComponent = {
@@ -56,7 +62,6 @@ export class Package {
         }
         return null;
     }
-
 
     get libraryClassesGroupedByName(): Map<string, Library[]> {
         let map = new Map<string, Library[]>();
@@ -89,49 +94,87 @@ export class Package {
         }
     }
 
-    static async createFromDsc(dscFile: Path, infFiles: Path[], workspace: vscode.WorkspaceFolder) {
-        let dsc: IDscData = await DscPaser.Parse(dscFile.toUri(), workspace.uri);
-        if (dsc) {
-            // TODO
-            // if (dsc.errors) {
-            //     logger.error(`Could not parse DSC: ${dsc.errors}`); // TODO: Verify formatting
-            //     continue;
-            // }
+    static async createFromDec(decFile: Path, workspace: vscode.WorkspaceFolder) {
+        // DEC is required, DSC is optional.
+        let dec: DecData = await DecPaser.ParseDec(decFile.toString());
+        if (dec) {
+            // Check to see if there's a corresponding DSC file
+            let dsc: IDscData;
+            let dscFile = decFile.replaceExtension('.dsc');
+            if (await utils.promisifyExists(dscFile.toString())) {
+                if (dscFile) {
+                    dsc = await DscPaser.Parse(dscFile.toUri(), workspace.uri);
+                }
+            }
+            if (dsc) {
+                // TODO
+                // if (dsc.errors) {
+                //     logger.error(`Could not parse DSC: ${dsc.errors}`); // TODO: Verify formatting
+                //     continue;
+                // }
+            }
 
+            return new Package(workspace, dec, dsc);
+        }
+        return null;
+    }
+
+    constructor(workspace: vscode.WorkspaceFolder, decData: DecData, dscData: IDscData = null, extendedData: IDscDataExtended = null) {
+        this.workspace = workspace;
+        this.dec = decData;
+        this.dsc = dscData;
+        this.dscExtended = extendedData;
+        this.libraries = new LibraryStore(this.workspace);
+        this.isProject = false;
+
+        if (this.dec) {
+            if (this.dec.defines) {
+                let def = this.dec.defines.get('PACKAGE_NAME');
+                if (def) { this.name = def.toString(); }
+            }
+
+            if (!this.name && this.dec.infPath) {
+                this.name = path.basename(this.dec.infPath);
+            }
+        }
+
+        if (this.dsc) {
             // TODO
             // INF libraries built by the DSC
             // for (let lib of pkg.libraryClasses) {
             //     this.libraryClassStore.add(lib);
             // }
-
-            return new Package(workspace, dsc);
-        }
-    }
-
-    constructor(workspace: vscode.WorkspaceFolder, data: IDscData, extendedData: IDscDataExtended = null) {
-        this.workspace = workspace;
-        this.data = data;
-        this.extendedData = extendedData;
-        this.libraries = new LibraryStore(this.workspace);
-
-        if (data) {
-            if (this.data.defines) {
-                let def = this.data.defines.get('PLATFORM_NAME');
-                if (def) { this.name = def.toString(); }
-
-                if (!this.name) {
-                    let def = this.data.defines.get('PROJECT_NAME');
-                    if (def) { this.name = def.toString(); }
+            if (this.dsc.defines) {
+                let def = this.dsc.defines.get('PLATFORM_NAME');
+                if (def) {
+                    this.isProject = true;
+                    this.name = def.trim();
                 }
             }
+        }
+
+        // if (this.data) {
+        //     if (this.data.defines) {
+        //         let def = this.data.defines.get('PLATFORM_NAME');
+        //         if (def) { this.name = def.toString(); }
+
+        //         if (!this.name) {
+        //             let def = this.data.defines.get('PROJECT_NAME');
+        //             if (def) { this.name = def.toString(); }
+        //         }
+        //     }
             
-            if (!this.name && this.data.filePath) {
-                this.name = path.basename(data.filePath.fsPath);
-            }
+        //     if (!this.name && this.data.filePath) {
+        //         this.name = path.basename(data.filePath.fsPath);
+        //     }
             
-            if (!this.name) {
-                throw new Error(`Could not find name for DSC`);
-            }
+        //     if (!this.name) {
+        //         throw new Error(`Could not find name for DSC`);
+        //     }
+        // }
+
+        if (!this.name) {
+            throw new Error(`Could not find name for Package`);
         }
     }
 }

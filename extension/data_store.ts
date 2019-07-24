@@ -9,6 +9,7 @@ import { InfData, DecData, IDscData } from "./parsers/types";
 import { PathLike } from "fs";
 import { Library, Package } from "./parsers/models";
 import { DscPaser } from "./dsc/parser";
+import * as utils from './utilities';
 
 /**
  * This class stores the relationship between a given file and the inf
@@ -255,24 +256,24 @@ export class PackageStore {
     public async scanForPackages(libraryStore: LibraryStore) {
         logger.info("PACKAGE_STORE: Scanning workspace ")
 
-        // Find all DSC files in the workspace that match the specified glob
-        // TODO: Use DEC+DSC files instead
-        let dscFiles = (await vscode.workspace.findFiles('**/*.dsc'))
+        // Find all DEC files in the workspace that match the specified glob
+        let decFiles = (await vscode.workspace.findFiles('**/*.dec'))
             .map((f) => new Path(f.fsPath));
 
-        for (let dscFile of dscFiles) {
-            //let dscFile = new Path(path.basename(decFile.toString(), '.dec') + '.dsc');
+        for (let decFile of decFiles) {
+            try {
+                let pkg = await Package.createFromDec(decFile, this.workspace);
+                if (pkg) {
+                    logger.info(`Discovered Package: ${pkg.filePath}`);
 
-            // TODO: Parse DEC file as well...
-            let pkg = await Package.createFromDsc(dscFile, [], this.workspace);
-            if (pkg) {
-                logger.info(`Discovered Package: ${pkg.filePath}`);
+                    await pkg.scanLibraries(libraryStore);
 
-                await pkg.scanLibraries(libraryStore);
-
-                this.add(pkg);
-            } else {
-                logger.error(`Could not load DSC package: ${dscFile}`);
+                    this.add(pkg);
+                } else {
+                    logger.error(`Could not load DSC package: ${decFile}`);
+                }
+            } catch (e) {
+                logger.error(`Could not parse package: ${decFile} - ${e}`);
             }
         }
     }

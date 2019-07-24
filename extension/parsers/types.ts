@@ -2,6 +2,7 @@ import { Uri } from "vscode";
 import { Path } from "../utilities";
 
 export interface InfData {
+  includes: string[];
   sources: string[];
   packages: string[];
   pcds: string[];
@@ -11,9 +12,14 @@ export interface InfData {
   components: string[];
   libraryClasses: string[];
 }
+
+// DECs are a subset of INFs
 export interface DecData {
   includes: string[];
-  decPath: string;
+  infPath: string;
+  defines: Map<string, string>;
+  components: string[];
+  libraryClasses: string[];
 }
 
 // a reduced, simplified version of all the DSC data - all conditionals are evaluated removed so everything applies
