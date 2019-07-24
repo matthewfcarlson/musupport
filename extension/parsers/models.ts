@@ -42,6 +42,20 @@ export class DscPackage {
         return null;
     }
 
+    private libraryClassFromData(name: string, path: Path) : DscLibraryClass {
+        // TODO: To resolve the path, we need to know which DSC package the INF actually belongs to
+        //let resolvedPath: Path = this.packageRoot.join(new Path(path));
+        let resolvedPath = new Path(path);
+
+        let lib: IDscComponent = {
+            infPath: resolvedPath,
+            archs: [], // TODO
+            libraryClasses: null,
+            source: null
+        };
+        return new DscLibraryClass(lib, name);
+    }
+
     /**
      * Returns a flattened list of libraryclasses referenced in the DSC.
      */
@@ -50,21 +64,28 @@ export class DscPackage {
             let items: DscLibraryClass[] = [];
 
             for (let [arch, libraries] of this.data.libraries.entries()) {
-                for (let [name, path] of libraries.entries()) {
-                    // TODO: To resolve the path, we need to know which DSC package the INF actually belongs to
-                    //let resolvedPath: Path = this.packageRoot.join(new Path(path));
-                    let resolvedPath = new Path(path);
-
-                    let lib: IDscComponent = {
-                        infPath: resolvedPath,
-                        archs: [], // TODO
-                        libraryClasses: null,
-                        source: null
-                    };
-                    items.push(new DscLibraryClass(lib, name.toString()));
+                for (let [name, path] of libraries) {
+                    items.push(this.libraryClassFromData(name.toString(), new Path(path)));
                 }
             }
             return items;
+        }
+        return null;
+    }
+
+    get libraryClassesGroupedByName(): Map<string, DscLibraryClass[]> {
+        if (this.data && this.data.libraries) {
+            let map = new Map<string, DscLibraryClass[]>();
+
+            for (let [arch, libraries] of this.data.libraries.entries()) {
+                for (let [name, path] of libraries) {
+                    let lib = this.libraryClassFromData(name.toString(), new Path(path));
+                    let entries = map.get(lib.name) || [];
+                    entries.push(lib);
+                    map.set(lib.name, entries);
+                }
+            }
+            return map;
         }
         return null;
     }

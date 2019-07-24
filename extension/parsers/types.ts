@@ -21,8 +21,9 @@ export interface DecData {
 export interface IDscData {
   filePath: Uri;
   defines: Map<String,String>;
-  libraries: Map<String, Map<String, String>>; // arch -> library name -> library inf uri
-  components: Map<String, String[]>; // arch -> component inf uris
+  //libraries: Map<String, Map<String, String>>; // arch -> library name -> library inf path
+  libraries: Map<String, [String, String][]>; // arch -> list of [library name, library inf path]
+  components: Map<String, String[]>; // arch -> component inf paths
   pcds: Map<String, Map<String, String>>; // type of PCD -> name -> value
 }
 
@@ -30,7 +31,7 @@ export interface IDscDataExtended {
   filePath: Uri;
   defines: IDscDefines[],
   findDefine: (String)=>IDscDefines[]; //search for a define by name
-  libraries: DscLibClass[],
+  libraries: IDscLibClass[],
   pcds: IDscPcd[],
   findPcd: (String)=>IDscPcd[];
   toDscData: ()=>IDscData; //returns the DSC data in a simpler format
@@ -114,11 +115,11 @@ export interface IDscComponent {
   source: ISourceInfo;
   infPath: Path;
   archs: DscArch[];
-  libraryClasses?:DscLibClass[];
+  libraryClasses?:IDscLibClass[];
   toString: ()=>String; // a function that returns a string
 }
 
-export interface DscLibClass {
+export interface IDscLibClass {
   source: ISourceInfo;
   infPath: Path;
   archs: DscArch[];

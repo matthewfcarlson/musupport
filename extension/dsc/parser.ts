@@ -237,14 +237,15 @@ export class DscPaser {
       components.set('UNKNOWN', inf.components);
 
       // Flattened list of library classes
-      let libraries = new Map<String, Map<String, String>>();
-      let librariesInner = new Map<String, String>();
+      let libraries = new Map<String, [String, String][]>();
+      let librariesInner: [String, String][] = [];
       for (let lib of inf.libraryClasses) {
         let [name, path] = lib.split('|');
         if (name) { name = name.trim(); }
         if (path) { path = path.trim(); }
         if (name && path) {
-          librariesInner.set(name, path);
+          let item: [String, String] = [name, path];
+          librariesInner.push(item);
         }
       }
       libraries.set('UNKNOWN', librariesInner);

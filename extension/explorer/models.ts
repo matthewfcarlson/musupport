@@ -46,10 +46,13 @@ export class PkgNode extends Node {
 
     getChildren() : Thenable<Node[]> {
         let items: Node[] = [];
-        if (this.pkg.libraryClasses && (this.pkg.libraryClasses.length > 0)) {
+        let libraries_map = this.pkg.libraryClassesGroupedByName;
+        if (libraries_map && (libraries_map.size > 0)) {
             items.push(new PkgSectionNode(
                 "LibraryClasses", 
-                this.pkg.libraryClasses.filter((o) => o).map((o) => new LibraryClassNode(o, this.selectCommand))
+                Array.from(libraries_map.entries())
+                    .map(([name, libraries]) => 
+                        new LibraryClassCollectionNode(name, libraries, this.selectCommand))
             ));
         }
         if (this.pkg.components && (this.pkg.components.length > 0)) {
