@@ -41,14 +41,15 @@ export class RepoScanner implements vscode.Disposable {
 
     public infStore:            InfStore;
     public projects:            Set<ProjectDefinition>;
-    public packageStore:       PackageStore;
-    public libraryClassStore:   LibraryStore;
+    public packageStore:        PackageStore;
+    public libraryStore:        LibraryStore;
 
     constructor(private readonly workspace: vscode.WorkspaceFolder) {
-        this.infStore           = new InfStore(workspace);
+        
         this.projects           = new Set<ProjectDefinition>();
-        this.libraryClassStore  = new LibraryStore(workspace);
-        this.packageStore       = new PackageStore(workspace, this.libraryClassStore);
+        this.infStore           = new InfStore(workspace);
+        this.libraryStore       = new LibraryStore(workspace);
+        this.packageStore       = new PackageStore(workspace);
 
         this.packageStore.onPackageDiscovered((pkg) => { this.packageDiscovered(pkg); });
     }
@@ -63,7 +64,7 @@ export class RepoScanner implements vscode.Disposable {
         this.infStore.clear();
         this.projects.clear();
         this.packageStore.clear();
-        this.libraryClassStore.clear();
+        this.libraryStore.clear();
     }
 
     async scan() {
@@ -74,12 +75,12 @@ export class RepoScanner implements vscode.Disposable {
 
         // Load all Libraries found in the workspace
         // NOTE: This will find ALL libraries, not just those referenced by a DSC/DEC package.
-        await this.libraryClassStore.scanForLibraries();
+        await this.libraryStore.scanForLibraries(this.infStore);
         this._onLibrariesDiscovered.fire(null);
 
         // Find all DEC packages in the workspace,
         // and the libraries/components that they include & export.
-        await this.packageStore.scanForPackages(this.infStore);
+        await this.packageStore.scanForPackages(this.libraryStore);
     }
 
     private async packageDiscovered(pkg: Package) {

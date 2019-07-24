@@ -113,6 +113,13 @@ export class LibraryClassNode extends Node {
     //     return (this.libraryClass.archs) ? `[${this.libraryClass.archs.join(',')}]` : null; 
     // }
 
+    get description(): string {
+        if (this.libraryClass.package) {
+            return this.libraryClass.package.name;
+        }
+        return null;
+    }
+
     selected() {
         let path = this.libraryClass.filePath;
         logger.info(`Selected library: ${path}`);

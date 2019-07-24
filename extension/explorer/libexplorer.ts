@@ -54,7 +54,7 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
         else {
             // 1st-level nodes
             return Promise.resolve(
-                this.repoScanner.libraryClassStore.getLibrariesGroupedByName()
+                this.repoScanner.libraryStore.getLibrariesGroupedByName()
                 .map(([name, classes]) => new LibraryClassCollectionNode(name, classes, LibraryClassProvider.SELECT_COMMAND)));
         }
     }

@@ -70,14 +70,21 @@ export class Package {
         this.libraries.add(lib);
     }
 
-    async scanLibraries(infStore: InfStore) {
-        let infs = await infStore.getInfsInPath(this.packageRoot);
-        if (infs) {
-            for (let inf of infs) {
-                let lib = Library.fromInfData(inf);
-                if (lib) {
-                    this.libraries.add(lib);
-                }
+    async scanLibraries(libraryStore: LibraryStore) {
+        // let infs = await infStore.getInfsInPath(this.packageRoot);
+        // if (infs) {
+        //     for (let inf of infs) {
+        //         let lib = Library.fromInfData(inf, this);
+        //         if (lib) {
+        //             this.libraries.add(lib);
+        //         }
+        //     }
+        // }
+        let libraries = libraryStore.getLibrariesInPath(this.packageRoot);
+        if (libraries) {
+            for (let lib of libraries) {
+                lib.package = this; // Update package owner
+                this.libraries.add(lib);
             }
         }
     }
@@ -91,23 +98,10 @@ export class Package {
             //     continue;
             // }
 
+            // TODO
             // INF libraries built by the DSC
             // for (let lib of pkg.libraryClasses) {
             //     this.libraryClassStore.add(lib);
-            // }
-
-            // Look for INF libraries contained within the package root
-            // TODO: Edge case - what if the a DEC package is defined inside another DEC package?
-            // let libs = infFiles.filter((f) => f.startsWith(pkg.packageRoot.toString()));
-            // for (let infPath of libs) {
-            //     let lib = await Library.parseInf(infPath);
-            //     if (lib) {
-            //         // Add to package's known libraries
-            //         pkg.addLibrary(lib);
-
-            //         // Also add to global library store
-            //         this.libraryClassStore.add(lib);
-            //     }
             // }
 
             return new Package(workspace, dsc);
@@ -168,7 +162,7 @@ export class Library {
     name: string;
     class: string;
     data: IComponent;
-    includedInPackage: Package;
+    package: Package;  // The package that the library belongs to
     filePath: Path;
 
     get archs() { return this.data.archs; }
@@ -182,7 +176,7 @@ export class Library {
         return null;
     }
 
-    static fromInfData(info: InfData) : Library {
+    static fromInfData(info: InfData, pkg: Package = null) : Library {
         if (info && info.defines) {
             let infPath = new Path(info.infPath);
             let comp: IDscLibClass = {
@@ -215,13 +209,13 @@ export class Library {
                 comp.name = def_basename.trim();
             }
 
-            return new Library(comp);
+            return new Library(comp, pkg);
         }
     }
 
     constructor(data: IDscLibClass, pkg: Package = null) {
         this.data = data;
-        this.includedInPackage = pkg;
+        this.package = pkg;
 
         if (data) {
             this.filePath = data.infPath;

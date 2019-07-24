@@ -15,12 +15,15 @@ import { DscPaser } from "./dsc/parser";
  */
 export class InfStore {
     private workspace: vscode.WorkspaceFolder;
-    private infFiles: Path[];
+    
     private infs: Map<string, InfData>;
     //this keeps track of an inf(value) for the source file (key)
     private infsForSource: Map<string, InfData[]>;
     //need some way to keep track of file => inf's
     //
+    
+    public infFiles: Path[];
+
     private scanInProgress = false;
     constructor(workspace: vscode.WorkspaceFolder) {
         this.infFiles = [];
@@ -222,14 +225,12 @@ export class PackageStore {
     public  readonly  onPackageDiscovered: vscode.Event<Package>        = this._onPackageDiscovered.event;
 
     private workspace: vscode.WorkspaceFolder;
-    private libraryStore: LibraryStore;
 
     private packages: Package[];
     private package_map: Map<string, Package>; // name -> package
 
-    constructor(workspace: vscode.WorkspaceFolder, libraryStore: LibraryStore) {
+    constructor(workspace: vscode.WorkspaceFolder) {
         this.workspace = workspace;
-        this.libraryStore = libraryStore;
         this.packages = [];
         this.package_map = new Map<string, Package>();
     }
@@ -251,7 +252,7 @@ export class PackageStore {
         return this.packages;
     }
 
-    public async scanForPackages(infStore: InfStore) {
+    public async scanForPackages(libraryStore: LibraryStore) {
         logger.info("PACKAGE_STORE: Scanning workspace ")
 
         // Find all DSC files in the workspace that match the specified glob
@@ -267,7 +268,7 @@ export class PackageStore {
             if (pkg) {
                 logger.info(`Discovered Package: ${pkg.filePath}`);
 
-                await pkg.scanLibraries(infStore);
+                await pkg.scanLibraries(libraryStore);
 
                 this.add(pkg);
             } else {
@@ -282,6 +283,7 @@ export class PackageStore {
  */
 export class LibraryStore {
     private workspace: vscode.WorkspaceFolder;
+    //private infStore: InfStore;
 
     // Grouped by name -> relative path -> library
     // The outer map groups classes by name
@@ -356,13 +358,13 @@ export class LibraryStore {
             );
     }
 
-    public async scanForLibraries() {
+    public async scanForLibraries(infStore: InfStore) {
         try {
             // Scan for all INFs in the repository
             // NOTE: It is faster to do a single batch search than many individual searches.
-            let infFiles = (await vscode.workspace.findFiles('**/*.inf'))
-                .map((f) => new Path(f.fsPath));
-
+            // let infFiles = (await vscode.workspace.findFiles('**/*.inf'))
+            //     .map((f) => new Path(f.fsPath));
+            let infFiles = infStore.infFiles;
                 
             for (let infFile of infFiles) {
                 if (infFile) {
