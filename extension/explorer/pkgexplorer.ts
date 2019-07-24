@@ -28,7 +28,7 @@ import * as path from 'path';
 import { RepoScanner, PCD } from '../reposcanner';
 import { logger } from '../logger';
 import { PkgNode, Node } from './models';
-import { DscPackage } from '../parsers/models';
+import { Package } from '../parsers/models';
 
 const VIEW_NAMESPACE: string = 'uefiPackageExplorer';
 
@@ -42,7 +42,7 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
 
     private static readonly SELECT_COMMAND: string = `${VIEW_NAMESPACE}.select`;
 
-    private packages: DscPackage[];
+    private packages: Package[];
 
     constructor(
         private workspace: vscode.WorkspaceFolder, 
@@ -64,7 +64,7 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
         });
 
         vscode.commands.registerCommand(
-            PackageTreeProvider.SELECT_COMMAND, item => { this.selectItem(item); }
+            PackageTreeProvider.SELECT_COMMAND, item => { item.selected(); }
         );
     }
 
@@ -89,17 +89,5 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
             // 1st-level nodes
             return Promise.resolve(this.packages.map((pkg) => new PkgNode(pkg, PackageTreeProvider.SELECT_COMMAND) ));
         }
-    }
-
-    private selectItem(element?: Node) {
-        if (element.contextValue == 'mu-pkg') {
-            let pkg = (element as PkgNode).pkg;
-            this.navigateToPackageFile(pkg);
-        }
-    }
-
-    private navigateToPackageFile(pkg: DscPackage) {
-        logger.info(`Selected package: ${pkg.filePath}`);
-        vscode.window.showTextDocument(pkg.filePath.toUri(), { preserveFocus: true });
     }
 }

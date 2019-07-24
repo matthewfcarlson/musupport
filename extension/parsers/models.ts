@@ -1,17 +1,29 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { IDscData, IDscDataExtended, IDscComponent } from "./types";
+import { IDscData, IDscDataExtended, IComponent, IDscLibClass } from "./types";
 import * as utils from '../utilities';
 import { Path } from '../utilities';
+import { LibraryClassStore } from '../reposcanner';
+import { InfPaser } from './inf_parser';
+import { logger } from '../logger';
 
 /***
- * Represents a DSC package
+ * Represents a DEC/DSC package
  * A package may include zero or more components (.inf), library classes, or PCDs. 
  */
-export class DscPackage {
+export class Package {
     name: string;
     data: IDscData;
     extendedData: IDscDataExtended;
+
+    // Libraries contained within this package (not necessarily referenced in the DSC or DEC)
+    libraries: LibraryClassStore;
+
+    // Libraries exported by this package's DEC file
+    //exportedLibraries: Library[];
+
+    // Libraries built by this package's DSC file
+    //includedLibraries: Library[];
 
     get fileName(): string { return (this.filePath) ? this.filePath.basename : null; }
     get filePath(): Path { return (this.data) ? new Path(this.data.filePath.fsPath) : null; }
@@ -20,21 +32,21 @@ export class DscPackage {
     /**
      * Returns a flattened list of components referenced in the DSC.
      */
-    get components(): DscComponent[] { 
+    get components(): Component[] { 
         if (this.data && this.data.components) {
-            let items: DscComponent[] = [];
+            let items: Component[] = [];
 
             // Iterate over each architecture
             for (let [arch, components] of this.data.components.entries()) {
                 for (let component of components) {
                     // TODO: Will need to parse the INF component??
-                    let comp: IDscComponent = {
+                    let comp: IComponent = {
                         infPath: new Path(component),
                         archs: [], // TODO
                         libraryClasses: null,
                         source: null
                     };
-                    items.push(new DscComponent(comp, this, null)); // TODO: Name should come from INF
+                    items.push(new Component(comp, this, null)); // TODO: Name should come from INF
                 }
             }
             return items;
@@ -42,68 +54,23 @@ export class DscPackage {
         return null;
     }
 
-    private libraryClassFromData(name: string, path: Path) : DscLibraryClass {
-        // TODO: To resolve the path, we need to know which DSC package the INF actually belongs to
-        //let resolvedPath: Path = this.packageRoot.join(new Path(path));
-        let resolvedPath = new Path(path);
 
-        let lib: IDscComponent = {
-            infPath: resolvedPath,
-            archs: [], // TODO
-            libraryClasses: null,
-            source: null
-        };
-        return new DscLibraryClass(lib, name);
-    }
-
-    /**
-     * Returns a flattened list of libraryclasses referenced in the DSC.
-     */
-    get libraryClasses(): DscLibraryClass[] {
-        if (this.data && this.data.libraries) {
-            let items: DscLibraryClass[] = [];
-
-            for (let [arch, libraries] of this.data.libraries.entries()) {
-                for (let [name, path] of libraries) {
-                    items.push(this.libraryClassFromData(name.toString(), new Path(path)));
-                }
-            }
-            return items;
+    get libraryClassesGroupedByName(): Map<string, Library[]> {
+        let map = new Map<string, Library[]>();
+        for (let [name, items] of this.libraries.getLibrariesGroupedByName()) {
+            map.set(name, items);
         }
-        return null;
+        return map;
     }
 
-    get libraryClassesGroupedByName(): Map<string, DscLibraryClass[]> {
-        if (this.data && this.data.libraries) {
-            let map = new Map<string, DscLibraryClass[]>();
-
-            for (let [arch, libraries] of this.data.libraries.entries()) {
-                for (let [name, path] of libraries) {
-                    let lib = this.libraryClassFromData(name.toString(), new Path(path));
-                    let entries = map.get(lib.name) || [];
-                    entries.push(lib);
-                    map.set(lib.name, entries);
-                }
-            }
-            return map;
-        }
-        return null;
+    async addLibrary(lib: Library) {
+        this.libraries.add(lib);
     }
-
-    /**
-     * Resolve a relative path defined in this DSC package
-     * @param path 
-     */
-    // resolvePath(pkgPath: Path): Path {
-    //     if (!pkgPath.isAbsolute) {
-    //         pkgPath = this.packageRoot.join(pkgPath);
-    //     }
-    //     return pkgPath;
-    // }
 
     constructor(data: IDscData, extendedData: IDscDataExtended = null) {
         this.data = data;
         this.extendedData = extendedData;
+        this.libraries = new LibraryClassStore();
 
         if (data) {
             if (this.data.defines) {
@@ -130,12 +97,12 @@ export class DscPackage {
 /**
  * Represents a INF component (PEI/DXE/SMM Driver/Application)
  */
-export class DscComponent {
+export class Component {
     name: string;
-    data: IDscComponent;
+    data: IComponent;
     filePath: Path;
 
-    constructor(data: IDscComponent, pkg: DscPackage = null, name: string = null) {
+    constructor(data: IComponent, pkg: Package = null, name: string = null) {
         this.data = data;
         this.name = name;
 
@@ -149,25 +116,62 @@ export class DscComponent {
     }
 }
 
-export class DscLibraryClass {
+export class Library {
     name: string;
-    data: IDscComponent;
+    class: string;
+    data: IComponent;
+    includedInPackage: Package;
     filePath: Path;
 
     get archs() { return this.data.archs; }
 
-    constructor(data: IDscComponent, name: string = null) { // TODO: Is this the right interface?
-        this.data = data;
-        this.name = name;
+    static async parseInf(infFile: Path) : Promise<Library> {
+        try {
+            let comp: IDscLibClass = {
+                name: infFile.basename,
+                class: null,
+                infPath: infFile,
+                archs: [], // TODO: Populate from INF
+                source: null
+            };
 
-        if (data) {
-            if (data) {
-                this.filePath = data.infPath;
-    
-                if (!this.name && this.filePath) {
-                    this.name = this.filePath.basename;
+            let info = await InfPaser.ParseInf(infFile.toString());
+            if (info && info.defines) {
+                // Get the INF basename
+                let def_basename = info.defines.get('BASE_NAME');
+                if (def_basename) {
+                    comp.name = def_basename.trim();
+                }
+
+                // Get the library class
+                let lclass: string = info.defines.get('LIBRARY_CLASS')
+                if (lclass && lclass.indexOf('|') > 0) {
+                    let [def_classname, def_classtypes] = lclass.split('|');
+                    if (def_classname) {
+                        comp.class = def_classname.trim();
+                    }
                 }
             }
+
+            return Promise.resolve(new Library(comp));
+        } catch (e) {
+            logger.error(`Error parsing INF: ${infFile} - ${e}`);
+            return null;
+        }
+    }
+
+    constructor(data: IDscLibClass, pkg: Package = null) {
+        this.data = data;
+        this.includedInPackage = pkg;
+
+        if (data) {
+            this.filePath = data.infPath;
+            this.name = data.name.toString();
+            this.class = data.class.toString();
+        }
+
+        if (!this.name && this.filePath) {
+            this.name = this.filePath.basename;
         }
     }
 }

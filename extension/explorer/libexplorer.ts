@@ -11,6 +11,8 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
     private _onDidChangeTreeData: vscode.EventEmitter<Node | undefined> = new vscode.EventEmitter<Node | undefined>();
     readonly onDidChangeTreeData: vscode.Event<Node | undefined> = this._onDidChangeTreeData.event;
 
+    static readonly SELECT_COMMAND: string = `${VIEW_NAMESPACE}.select`;
+
     constructor(
         private workspace: vscode.WorkspaceFolder, 
         private repoScanner: RepoScanner
@@ -22,15 +24,14 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
             treeDataProvider: this
         });
 
-
         // Subscribe to package discovery
         this.repoScanner.onPackageDiscovered((pkg) => { 
             this.refresh(); 
         });
 
-        // vscode.commands.registerCommand(
-        //     `${VIEW_NAMESPACE}.select`, item => { this.selectItem(item); }
-        // );
+        vscode.commands.registerCommand(
+            LibraryClassProvider.SELECT_COMMAND, item => { item.selected(); }
+        );
     }
 
     refresh(): void {
@@ -54,11 +55,7 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
             // 1st-level nodes
             return Promise.resolve(
                 this.repoScanner.libraryClassStore.getLibrariesGroupedByName()
-                .map(([name, classes]) => new LibraryClassCollectionNode(name, classes)));
+                .map(([name, classes]) => new LibraryClassCollectionNode(name, classes, LibraryClassProvider.SELECT_COMMAND)));
         }
-    }
-
-    private selectItem(element?: Node) {
-
     }
 }

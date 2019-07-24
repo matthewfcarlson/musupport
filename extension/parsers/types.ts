@@ -111,7 +111,7 @@ export interface IDscConditional {
   eval: Boolean; //the result of the evaluation
 }
 
-export interface IDscComponent {
+export interface IComponent {
   source: ISourceInfo;
   infPath: Path;
   archs: DscArch[];
@@ -124,6 +124,7 @@ export interface IDscLibClass {
   infPath: Path;
   archs: DscArch[];
   name: String;
+  class: String;
   toString: ()=>String; // a function that returns a string
   //BuildOptions: DscBuildOption[];
 }

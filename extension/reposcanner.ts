@@ -5,9 +5,10 @@ import * as utils from './utilities';
 import { ProjectDefinition, ProjectManager } from './projectmanager';
 import { stringify } from 'querystring';
 import { logger } from './logger';
-import { InfData, DecData, IDscDataExtended, IDscData, IDscComponent, DscArch, ISourceInfo, IDscLibClass } from "./parsers/types";
+import { InfData, DecData, IDscDataExtended, IDscData, IComponent, DscArch, ISourceInfo, IDscLibClass } from "./parsers/types";
 import { DscPaser } from './dsc/parser';
-import { DscPackage, DscLibraryClass } from './parsers/models';
+import { Package, Library } from './parsers/models';
+import { Path } from './utilities';
 
 /***
  * Represents a PCD entry in a DSC
@@ -26,21 +27,21 @@ export class RepoScanner implements vscode.Disposable {
     private readonly _onProjectDiscovered: vscode.EventEmitter<ProjectDefinition> = new vscode.EventEmitter<ProjectDefinition>();
     public  readonly  onProjectDiscovered: vscode.Event<ProjectDefinition>        = this._onProjectDiscovered.event;
 
-    private readonly _onPackageDiscovered: vscode.EventEmitter<DscPackage> = new vscode.EventEmitter<DscPackage>();
-    public  readonly  onPackageDiscovered: vscode.Event<DscPackage>        = this._onPackageDiscovered.event;
+    private readonly _onPackageDiscovered: vscode.EventEmitter<Package> = new vscode.EventEmitter<Package>();
+    public  readonly  onPackageDiscovered: vscode.Event<Package>        = this._onPackageDiscovered.event;
 
     // public projects: ProjectDefinition[];
-    // public packages: DscPackage[];
+    // public packages: Package[];
     // public components: ComponentDefinition[];
     // public libraryClasses: LibraryClassDefinition[];
 
-    public projects: Set<ProjectDefinition>;
-    public packagesStore: DscPackageStore;
-    public libraryClassStore: LibraryClassStore;
+    public projects:            Set<ProjectDefinition>;
+    public packagesStore:       PackageStore;
+    public libraryClassStore:   LibraryClassStore;
 
     constructor(private readonly workspace: vscode.WorkspaceFolder) {
         this.projects = new Set<ProjectDefinition>();
-        this.packagesStore = new DscPackageStore();
+        this.packagesStore = new PackageStore();
         this.libraryClassStore = new LibraryClassStore();
     }
 
@@ -64,79 +65,73 @@ export class RepoScanner implements vscode.Disposable {
                 utils.showError('musupport.platformDsc is not defined');
             }
 
-            // Find all DSC files in the workspace that match the specified glob
-            var dscFiles = await vscode.workspace.findFiles(`**/*.dsc`); // TODO: Better path handling
-            if (!dscFiles) {
-                return null;
-            }
-
             this.clear();
 
-            for (let uri of dscFiles) {
-                let def: DscPackage;
-                let dscPath = uri;
-                let dscParentPath = vscode.Uri.file(path.dirname(uri.fsPath));
+            // Scan for all INFs in the repository
+            // NOTE: It is faster to do a single batch search than many individual searches.
+            let infFiles = (await vscode.workspace.findFiles('**/*.inf'))
+                .map((f) => new Path(f.fsPath));
 
-                let dsc: IDscData = await DscPaser.Parse(dscPath, this.workspace.uri);
-                if (dsc) {
-                    // if (dsc.errors) {
-                    //     logger.error(`Could not parse DSC: ${dsc.errors}`); // TODO: Verify formatting
-                    //     continue;
-                    // }
-                    logger.info(`Discovered DSC: ${dsc.filePath.fsPath}`);
-                    let pkg = new DscPackage(dsc);
+            // Find all DSC files in the workspace that match the specified glob
+            let decFiles = await vscode.workspace.findFiles('**/*.dsc');
+            if (decFiles) {
+                for (let uri of decFiles) {
+                    let def: Package;
+                    let dscPath = uri;
+                    let dscParentPath = vscode.Uri.file(path.dirname(uri.fsPath));
 
-                    for (let lib of pkg.libraryClasses) {
-                        this.libraryClassStore.add(lib);
-                    }
+                    let dsc: IDscData = await DscPaser.Parse(dscPath, this.workspace.uri);
+                    if (dsc) {
+                        // if (dsc.errors) {
+                        //     logger.error(`Could not parse DSC: ${dsc.errors}`); // TODO: Verify formatting
+                        //     continue;
+                        // }
 
-                    if (platformDsc) {
-                        if (pkg.fileName === platformDsc) {
-                            let proj = await this.createProjectDefFromDsc(pkg.filePath.toUri());
-                            this.projects.add(proj);
-                            
-                            // Signal project has been discovered
-                            logger.info(`Project Found: ${proj.projectName} @ ${proj.platformDscPath}`);
-                            this._onProjectDiscovered.fire(proj);
+                        logger.info(`Discovered DSC: ${dsc.filePath.fsPath}`);
+                        let pkg = new Package(dsc);
+
+                        // INF libraries built by the DSC
+                        // for (let lib of pkg.libraryClasses) {
+                        //     this.libraryClassStore.add(lib);
+                        // }
+
+                        // Look for INF libraries contained within the package root
+                        // TODO: Edge case - what if the a DEC package is defined inside another DEC package?
+                        let libs = infFiles.filter((f) => f.startsWith(pkg.packageRoot.toString()));
+                        for (let infPath of libs) {
+                            let lib = await Library.parseInf(infPath);
+                            if (lib) {
+                                // Add to package's known libraries
+                                pkg.addLibrary(lib);
+
+                                // Also add to global library store
+                                this.libraryClassStore.add(lib);
+                            }
                         }
+
+                        // Look for buildable project packages
+                        if (platformDsc) {
+                            if (pkg.fileName === platformDsc) {
+                                let proj = await this.createProjectDefFromDsc(pkg.filePath.toUri());
+                                this.projects.add(proj);
+                                
+                                // Signal project has been discovered
+                                logger.info(`Project Found: ${proj.projectName} @ ${proj.platformDscPath}`);
+                                this._onProjectDiscovered.fire(proj);
+                            }
+                        }
+                        
+                        this.packagesStore.add(pkg);
+                        this._onPackageDiscovered.fire(pkg);
                     }
-                    
-                    this.packagesStore.add(pkg);
-                    this._onPackageDiscovered.fire(pkg);
                 }
             }
+
         } catch (e) {
             logger.error(`Error scanning packages: ${e}`, e);
             throw e;
         }
     }
-
-    // /*
-    //     Scan the workspace for projects, as defined by musupport.platformDsc glob pattern.
-    //     A project must have a DSC file, and may optionally have a PlatformBuild.py build script.
-    //     If the PlatformBuild.py build script is not present, functionality will be limited.
-    // */
-    // async scanForProjects(): Promise<ProjectDefinition[]> {
-    //     const config = vscode.workspace.getConfiguration(null, null);
-    //     const platformDsc: string = config.get('musupport.platformDsc');
-    //     if (!platformDsc) {
-    //         utils.showError('musupport.platformDsc is not defined');
-    //         return null;
-    //     }
-
-    //     // Find all DSC files in the workspace that match the specified glob
-    //     var platformDscFiles = await vscode.workspace.findFiles("**/"+platformDsc); // TODO: Better path handling
-    //     if (!platformDscFiles) {
-    //         logger.warn("No files found for the GLOB")
-    //         return null;
-    //     }
-        
-    //     // Create a project definition for each DSC file
-    //     var promises = platformDscFiles
-    //         .map((f) => this.createProjectDefFromDsc(f));
-    //     return (await Promise.all(promises))
-    //         .filter((def) => (def)); // Remove null entries
-    // }
 
     private async createProjectDefFromDsc(uri: vscode.Uri) : Promise<ProjectDefinition> {
         if (!uri) {
@@ -189,13 +184,13 @@ export class RepoScanner implements vscode.Disposable {
 }
 
 
-export class DscPackageStore {
-    private packages: DscPackage[];
-    private package_map: Map<string, DscPackage>;
+export class PackageStore {
+    private packages: Package[];
+    private package_map: Map<string, Package>;
 
     constructor() {
         this.packages = [];
-        this.package_map = new Map<string, DscPackage>();
+        this.package_map = new Map<string, Package>();
     }
 
     clear() {
@@ -203,14 +198,14 @@ export class DscPackageStore {
         this.package_map.clear();
     }
 
-    add(pkg: DscPackage) {
+    add(pkg: Package) {
         if (pkg) {
             this.packages.push(pkg);
             this.package_map.set(pkg.name, pkg);
         }
     }
 
-    get items(): DscPackage[] {
+    get items(): Package[] {
         return this.packages;
     }
 }
@@ -223,33 +218,37 @@ export class LibraryClassStore {
     // Grouped by name -> relative path -> library
     // The outer map groups classes by name
     // The inner map keeps a unique set of classes
-    // TODO: Use a Set<DscLibraryClass> for the inner collection.
-    private classes: DscLibraryClass[];
-    private class_map: Map<string, Map<string, DscLibraryClass>>;
+    // TODO: Use a Set<Library> for the inner collection.
+    private libraries: Library[];
+    private class_map: Map<string, Map<string, Library>>;
 
     constructor() {
-        this.classes = [];
-        this.class_map = new Map<string, Map<string, DscLibraryClass>>();
+        this.libraries = [];
+        this.class_map = new Map<string, Map<string, Library>>();
     }
 
     clear() {
-        this.classes = [];
+        this.libraries = [];
         this.class_map.clear();
     }
 
-    add(lib: DscLibraryClass) {
+    add(lib: Library) {
         if (lib) {
-            this.classes.push(lib);
+            this.libraries.push(lib);
 
             // Add library class to dictionary
-            let entries = this.class_map.get(lib.name) || new Map<string, DscLibraryClass>();
+            let entries = this.class_map.get(lib.class) || new Map<string, Library>();
             entries.set(lib.filePath.toString(), lib);
-            this.class_map.set(lib.name, entries);
+            this.class_map.set(lib.class, entries);
         }
     }
 
-    get items(): DscLibraryClass[] {
-        return this.classes;
+    get items(): Library[] {
+        return this.libraries;
+    }
+
+    get classes(): string[] {
+        return Array.from(this.class_map.keys());
     }
 
     getLibrariesForArch(arch) {
@@ -263,12 +262,12 @@ export class LibraryClassStore {
     /**
      * Returns a list of tuples of libraries grouped by name
      */
-    getLibrariesGroupedByName(): [string, DscLibraryClass[]][] {
+    getLibrariesGroupedByName(): [string, Library[]][] {
         return Array
             .from(this.class_map.entries())
             .map(
                ([a,b]) => { 
-                   let r: [string, DscLibraryClass[]] = [a, Array.from(b.values())];
+                   let r: [string, Library[]] = [a, Array.from(b.values())];
                    return r;
                 }
             );
