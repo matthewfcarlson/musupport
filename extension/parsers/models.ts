@@ -3,21 +3,23 @@ import * as path from 'path';
 import { IDscData, IDscDataExtended, IComponent, IDscLibClass } from "./types";
 import * as utils from '../utilities';
 import { Path } from '../utilities';
-import { LibraryClassStore } from '../reposcanner';
 import { InfPaser } from './inf_parser';
 import { logger } from '../logger';
+import { LibraryStore } from '../data_store';
 
 /***
  * Represents a DEC/DSC package
  * A package may include zero or more components (.inf), library classes, or PCDs. 
  */
 export class Package {
+    private workspace: vscode.WorkspaceFolder;
+
     name: string;
     data: IDscData;
     extendedData: IDscDataExtended;
 
     // Libraries contained within this package (not necessarily referenced in the DSC or DEC)
-    libraries: LibraryClassStore;
+    libraries: LibraryStore;
 
     // Libraries exported by this package's DEC file
     //exportedLibraries: Library[];
@@ -67,10 +69,11 @@ export class Package {
         this.libraries.add(lib);
     }
 
-    constructor(data: IDscData, extendedData: IDscDataExtended = null) {
+    constructor(workspace: vscode.WorkspaceFolder, data: IDscData, extendedData: IDscDataExtended = null) {
+        this.workspace = workspace;
         this.data = data;
         this.extendedData = extendedData;
-        this.libraries = new LibraryClassStore();
+        this.libraries = new LibraryStore(this.workspace);
 
         if (data) {
             if (this.data.defines) {
@@ -127,37 +130,44 @@ export class Library {
 
     static async parseInf(infFile: Path) : Promise<Library> {
         try {
-            let comp: IDscLibClass = {
-                name: infFile.basename,
-                class: null,
-                infPath: infFile,
-                archs: [], // TODO: Populate from INF
-                source: null
-            };
-
             let info = await InfPaser.ParseInf(infFile.toString());
             if (info && info.defines) {
+                let comp: IDscLibClass = {
+                    name: infFile.basename,
+                    class: null,
+                    infPath: infFile,
+                    archs: [], // TODO: Populate from INF
+                    source: null
+                };
+
+                // Get the library class
+                let lclass: string = info.defines.get('LIBRARY_CLASS')
+                if (!lclass) {
+                    // This INF is not a library!
+                    return null;
+                }
+
+                if (lclass.indexOf('|') > 0) {
+                    let [def_classname, def_classtypes] = lclass.split('|');
+                    if (def_classname) {
+                        comp.class = def_classname.trim();
+                    }
+                } else {
+                    comp.class = lclass.trim();
+                }
+
                 // Get the INF basename
                 let def_basename = info.defines.get('BASE_NAME');
                 if (def_basename) {
                     comp.name = def_basename.trim();
                 }
 
-                // Get the library class
-                let lclass: string = info.defines.get('LIBRARY_CLASS')
-                if (lclass && lclass.indexOf('|') > 0) {
-                    let [def_classname, def_classtypes] = lclass.split('|');
-                    if (def_classname) {
-                        comp.class = def_classname.trim();
-                    }
-                }
+                return new Library(comp);
             }
-
-            return Promise.resolve(new Library(comp));
         } catch (e) {
             logger.error(`Error parsing INF: ${infFile} - ${e}`);
-            return null;
         }
+        return null;
     }
 
     constructor(data: IDscLibClass, pkg: Package = null) {
@@ -166,8 +176,8 @@ export class Library {
 
         if (data) {
             this.filePath = data.infPath;
-            this.name = data.name.toString();
-            this.class = data.class.toString();
+            this.name = (data.name) ? data.name.toString() : null;
+            this.class = (data.class) ? data.class.toString() : null;
         }
 
         if (!this.name && this.filePath) {

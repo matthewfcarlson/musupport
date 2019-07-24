@@ -25,9 +25,9 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
         });
 
         // Subscribe to package discovery
-        this.repoScanner.onPackageDiscovered((pkg) => { 
-            this.refresh(); 
-        });
+        this.repoScanner.onLibrariesDiscovered((libraries) => {
+            this.refresh();
+        })
 
         vscode.commands.registerCommand(
             LibraryClassProvider.SELECT_COMMAND, item => { item.selected(); }
