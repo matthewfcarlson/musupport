@@ -52,7 +52,8 @@ export class DscPackage {
             for (let [arch, libraries] of this.data.libraries.entries()) {
                 for (let [name, path] of libraries.entries()) {
                     // TODO: To resolve the path, we need to know which DSC package the INF actually belongs to
-                    let resolvedPath: Path = this.packageRoot.join(new Path(path));
+                    //let resolvedPath: Path = this.packageRoot.join(new Path(path));
+                    let resolvedPath = new Path(path);
 
                     let lib: IDscComponent = {
                         infPath: resolvedPath,
@@ -147,51 +148,5 @@ export class DscLibraryClass {
                 }
             }
         }
-    }
-}
-
-/**
- * A store of all known library classes
- */
-export class LibraryClassStore {
-    // The outer map groups classes by name
-    // The inner map keeps a unique set of classes
-    // TODO: Use a Set<DscLibraryClass> for the inner collection.
-    private classes: Map<string, Map<string, DscLibraryClass>>;
-
-    constructor() {
-        this.classes = new Map<string, Map<string, DscLibraryClass>>();
-    }
-
-    clear() {
-        this.classes.clear();
-    }
-
-    add(cls: DscLibraryClass) {
-        if (cls) {
-            // Add library class to dictionary
-            let entries = this.classes.get(cls.name) || new Map<string, DscLibraryClass>();
-            entries.set(cls.filePath.toString(), cls);
-            this.classes.set(cls.name, entries);
-        }
-    }
-
-    getClassesByArch(arch) {
-        return null; // TODO
-    }
-
-    getClassesForDsc(dsc) {
-        return null;
-    }
-
-    getClassesGroupedByName(): [string, DscLibraryClass[]][] {
-        return Array
-            .from(this.classes.entries())
-            .map(
-               ([a,b]) => { 
-                   let r: [string, DscLibraryClass[]] = [a, Array.from(b.values())];
-                   return r;
-                }
-            );
     }
 }

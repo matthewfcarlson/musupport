@@ -4,7 +4,6 @@ import * as vscode from 'vscode';
 import { RepoScanner, PCD } from '../reposcanner';
 import { logger } from '../logger';
 import { LibraryClassNode, Node, LibraryClassCollectionNode } from './models';
-import { LibraryClassStore } from '../parsers/models';
 
 const VIEW_NAMESPACE: string = 'uefiLibClassExplorer';
 
@@ -12,13 +11,10 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
     private _onDidChangeTreeData: vscode.EventEmitter<Node | undefined> = new vscode.EventEmitter<Node | undefined>();
     readonly onDidChangeTreeData: vscode.Event<Node | undefined> = this._onDidChangeTreeData.event;
 
-    private classes: LibraryClassStore;
-
     constructor(
         private workspace: vscode.WorkspaceFolder, 
         private repoScanner: RepoScanner
     ) {
-        this.classes = new LibraryClassStore();
     }
 
     public register(context: vscode.ExtensionContext) {
@@ -26,13 +22,9 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
             treeDataProvider: this
         });
 
-        this.classes.clear();
 
         // Subscribe to package discovery
         this.repoScanner.onPackageDiscovered((pkg) => { 
-            for (let cls of pkg.libraryClasses) {
-                this.classes.add(cls);
-            }
             this.refresh(); 
         });
 
@@ -61,7 +53,7 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
         else {
             // 1st-level nodes
             return Promise.resolve(
-                this.classes.getClassesGroupedByName()
+                this.repoScanner.libraryClassStore.getLibrariesGroupedByName()
                 .map(([name, classes]) => new LibraryClassCollectionNode(name, classes)));
         }
     }
