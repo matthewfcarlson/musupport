@@ -45,7 +45,7 @@ export class InfPaser {
             if (rawInfData["Protocols"] != undefined) data.guids = data.guids.concat(rawInfData["Protocols"]);
             if (rawInfData["Guids"] != undefined) data.guids = data.guids.concat(rawInfData["Guids"]);
             if (rawInfData["Pcd"] != undefined) data.pcds = data.pcds.concat(rawInfData["Pcd"]);
-            if (rawInfData["Components"] != undefined) data.components = data.components.concat(rawInfData["Components"]);
+            if (rawInfData["Components"] != undefined) data.components = data.components.concat(this.parseComponent(rawInfData["Components"]));
             if (rawInfData["LibraryClasses"] != undefined) data.libraryClasses = data.libraryClasses.concat(rawInfData["LibraryClasses"]);
         }
         catch (err) {
@@ -76,5 +76,17 @@ export class InfPaser {
             }
         }
         return map;
+    }
+
+    private static parseComponent(comp: string[]) {
+        // HACK: Remove lines that don't look like component definitions (eg. preprocessor syntax, library overrides)
+        let re = new RegExp('^[\\w/\\\\]+\\.inf');
+        return comp.map((c) => {
+            let results = re.exec(c);
+            if (results && results.length >= 1) {
+                return results[0];
+            }
+            return null;
+        }).filter((c) => (c != null));
     }
 }
