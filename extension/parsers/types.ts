@@ -1,4 +1,5 @@
 import { Uri } from "vscode";
+import { Path } from "../utilities";
 
 export interface InfData {
   sources: string[];
@@ -111,7 +112,7 @@ export interface IDscConditional {
 
 export interface IDscComponent {
   source: ISourceInfo;
-  infPath: String;
+  infPath: Path;
   archs: DscArch[];
   libraryClasses?:DscLibClass[];
   toString: ()=>String; // a function that returns a string
@@ -119,7 +120,7 @@ export interface IDscComponent {
 
 export interface DscLibClass {
   source: ISourceInfo;
-  infPath: String;
+  infPath: Path;
   archs: DscArch[];
   name: String;
   toString: ()=>String; // a function that returns a string

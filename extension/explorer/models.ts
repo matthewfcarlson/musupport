@@ -127,7 +127,7 @@ export class LibraryClassFileNode extends Node {
         super(libraryClass.filePath.toString(), false, selectCommand);
     }
 
-    get tooltip(): string { return `${this.libraryClass.absoluteFilePath}`; }
+    get tooltip(): string { return `${this.libraryClass.filePath}`; }
 
     contextValue = 'mu-inf';
 }

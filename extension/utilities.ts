@@ -262,7 +262,7 @@ export class Path extends String {
   get isAbsolute(): boolean { return path.isAbsolute(this.toString()); }
   get basename(): string { return path.basename(this.toString()); }
   get dirname(): string { return path.dirname(this.toString()); }
-  get parent(): Path { return new Path(path.resolve(this.toString() + '/..')); }
+  get parent(): Path { return new Path(path.dirname(this.toString())); }
 
   toUri(): vscode.Uri {
     if (!this.isAbsolute) {

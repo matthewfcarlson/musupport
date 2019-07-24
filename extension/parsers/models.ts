@@ -29,7 +29,7 @@ export class DscPackage {
                 for (let component of components) {
                     // TODO: Will need to parse the INF component??
                     let comp: IDscComponent = {
-                        infPath: component.toString(),
+                        infPath: new Path(component),
                         archs: [], // TODO
                         libraryClasses: null,
                         source: null
@@ -51,13 +51,16 @@ export class DscPackage {
 
             for (let [arch, libraries] of this.data.libraries.entries()) {
                 for (let [name, path] of libraries.entries()) {
+                    // TODO: To resolve the path, we need to know which DSC package the INF actually belongs to
+                    let resolvedPath: Path = this.packageRoot.join(new Path(path));
+
                     let lib: IDscComponent = {
-                        infPath: path.toString(),
+                        infPath: resolvedPath,
                         archs: [], // TODO
                         libraryClasses: null,
                         source: null
                     };
-                    items.push(new DscLibraryClass(lib, this, name.toString()));
+                    items.push(new DscLibraryClass(lib, name.toString()));
                 }
             }
             return items;
@@ -69,12 +72,12 @@ export class DscPackage {
      * Resolve a relative path defined in this DSC package
      * @param path 
      */
-    resolvePath(pkgPath: Path): Path {
-        if (!pkgPath.isAbsolute) {
-            pkgPath = this.packageRoot.join(pkgPath);
-        }
-        return pkgPath;
-    }
+    // resolvePath(pkgPath: Path): Path {
+    //     if (!pkgPath.isAbsolute) {
+    //         pkgPath = this.packageRoot.join(pkgPath);
+    //     }
+    //     return pkgPath;
+    // }
 
     constructor(data: IDscData, extendedData: IDscDataExtended = null) {
         this.data = data;
@@ -115,9 +118,7 @@ export class DscComponent {
         this.name = name;
 
         if (data) {
-            if (data.infPath && pkg) {
-                this.filePath = new Path(data.infPath);
-            }
+            this.filePath = data.infPath;
 
             if (!this.name && this.filePath) {
                 this.name = path.basename(this.filePath.toString());
@@ -130,21 +131,16 @@ export class DscLibraryClass {
     name: string;
     data: IDscComponent;
     filePath: Path;
-    dsc: DscPackage;
 
     get archs() { return this.data.archs; }
-    get absoluteFilePath() { return (this.dsc && this.filePath) ? (this.dsc.resolvePath(this.filePath)) : null; }
 
-    constructor(data: IDscComponent, dsc: DscPackage = null, name: string = null) { // TODO: Is this the right interface?
+    constructor(data: IDscComponent, name: string = null) { // TODO: Is this the right interface?
         this.data = data;
         this.name = name;
-        this.dsc = dsc;
 
         if (data) {
             if (data) {
-                if (data.infPath && dsc) {
-                    this.filePath = new Path(data.infPath);
-                }
+                this.filePath = data.infPath;
     
                 if (!this.name && this.filePath) {
                     this.name = this.filePath.basename;
