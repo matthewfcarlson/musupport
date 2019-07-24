@@ -48,6 +48,7 @@ export class PkgNode extends Node {
 
     getChildren() : Thenable<Node[]> {
         let items: Node[] = [];
+
         let libraries_map = this.pkg.libraryClassesGroupedByName;
         if (libraries_map && (libraries_map.size > 0)) {
             items.push(new PkgSectionNode(
@@ -57,18 +58,30 @@ export class PkgNode extends Node {
                         new LibraryClassCollectionNode(name, libraries, this.selectCommand))
             ));
         }
+
         if (this.pkg.components && (this.pkg.components.length > 0)) {
             items.push(new PkgSectionNode(
                 "Components", 
                 this.pkg.components.filter((o) => o).map((o) => new ComponentNode(o))
             ));
         }
+
+        let exported_libraries = this.pkg.exportedLibraries;
+        if (exported_libraries && exported_libraries.length > 0) {
+            items.push(new PkgSectionNode(
+                "Exported LibraryClasses",
+                exported_libraries.map((lib) =>
+                    new LibraryClassNode(lib, this.selectCommand))
+            ));
+        }
+
         // if (this.pkg.pcds && (this.pkg.pcds.length > 0)) {
         //     items.push(new PkgSectionNode(
         //         "PCDs", 
         //         this.pkg.pcds.filter((o) => o).map((o) => new Node(o.name, false))
         //     ));
         // }
+        
         return Promise.resolve(items);
     }
 

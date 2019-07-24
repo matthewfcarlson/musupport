@@ -1,10 +1,10 @@
-import { promisifyReadFile, stringTrim } from "../utilities";
+import { promisifyReadFile, stringTrim, Path } from "../utilities";
 import { logger } from "../logger";
 import * as path from 'path';
-import { InfData } from "./types";
+import { InfData, IDscLibClass } from "./types";
 
 export class InfPaser {
-    public static async ParseInf(infpath: string): Promise<InfData> {
+    public static async ParseInf(infpath: Path): Promise<InfData> {
         // Join continued lines
 
         var data: InfData = {
@@ -19,7 +19,7 @@ export class InfPaser {
             infPath: infpath
         };
         try {
-            const str = await promisifyReadFile(infpath);
+            const str = await promisifyReadFile(infpath.toString());
             //replace \r\n, strip comments, replace double newlines with just one, replace multiple whitespaces with one
             const lines = str.replace(/\\[\r\n]+/g, '').replace(/\r/g, "\n").replace(/#.*[$\n]/g, '\n').replace(/\n\n+/g, '\n').replace(/[\t ]{2,}/g, " ").split(/\n/)
 
@@ -48,7 +48,7 @@ export class InfPaser {
             if (rawInfData["Guids"] != undefined) data.guids = data.guids.concat(rawInfData["Guids"]);
             if (rawInfData["Pcd"] != undefined) data.pcds = data.pcds.concat(rawInfData["Pcd"]);
             if (rawInfData["Components"] != undefined) data.components = data.components.concat(this.parseComponent(rawInfData["Components"]));
-            if (rawInfData["LibraryClasses"] != undefined) data.libraryClasses = data.libraryClasses.concat(rawInfData["LibraryClasses"]);
+            if (rawInfData["LibraryClasses"] != undefined) data.libraryClasses = data.libraryClasses.concat(this.parseLibraryClasses(rawInfData["LibraryClasses"], infpath.parent));
         }
         catch (err) {
             logger.error("INF_PARSER ERROR", err)
@@ -56,12 +56,32 @@ export class InfPaser {
             logger.error(JSON.stringify(err));
             logger.error(typeof err);
         }
-        const infDirPath = path.dirname(infpath);
-''
+        const infDirPath = infpath.dirname;
+
         data.sources = data.sources.map(x => path.join(infDirPath, x))
         data.includes = data.includes.map(x => path.join(infDirPath, x))
 
         return Promise.resolve(data);
+    }
+
+    private static parseLibraryClasses(lines: string[], infPath: Path): IDscLibClass[] {
+        let items: IDscLibClass[] = [];
+        for (let ln of lines) {
+            let [classname, path] = ln.split('|');
+            if (classname) { classname = classname.trim(); }
+            if (path) { path = path.trim(); }
+            if (classname && path) {
+                let item: IDscLibClass = {
+                    class: classname,
+                    name: null,
+                    archs: null,
+                    infPath: infPath.join(new Path(path)),
+                    source: null
+                };
+                items.push(item);
+            }
+        }
+        return items;
     }
 
     private static parseMap(lines: string[]) : Map<string, string> {

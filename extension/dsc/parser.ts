@@ -1,5 +1,5 @@
 import { IDscData, IDscDataExtended, IDscDefines, IDscPcd, ISourceInfo, IDscError, DscSections, DscPcdType } from '../parsers/types';
-import { promisifyReadFile, stringTrimLeft, stringTrimRight, stringTrim } from '../utilities';
+import { promisifyReadFile, stringTrimLeft, stringTrimRight, stringTrim, Path } from '../utilities';
 import { logger } from "../logger";
 import * as path from 'path';
 import { Uri } from 'vscode';
@@ -229,7 +229,7 @@ export class DscPaser {
     //return (await this.ParseFull(dscpath, workspacePath)).toDscData();
 
     // HACKY INF PARSER
-    let inf = await InfPaser.ParseInf(dscpath.fsPath);
+    let inf = await InfPaser.ParseInf(new Path(dscpath.fsPath));
     if (inf && inf.defines) {
 
       // Flattened list of components
@@ -240,13 +240,8 @@ export class DscPaser {
       let libraries = new Map<String, [String, String][]>();
       let librariesInner: [String, String][] = [];
       for (let lib of inf.libraryClasses) {
-        let [name, path] = lib.split('|');
-        if (name) { name = name.trim(); }
-        if (path) { path = path.trim(); }
-        if (name && path) {
-          let item: [String, String] = [name, path];
-          librariesInner.push(item);
-        }
+        let item: [String, String] = [lib.class, lib.infPath];
+        librariesInner.push(item);
       }
       libraries.set('UNKNOWN', librariesInner);
 

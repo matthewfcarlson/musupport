@@ -7,19 +7,19 @@ export interface InfData {
   packages: string[];
   pcds: string[];
   guids: string[]; // protocols and guids
-  infPath: string;
+  infPath: Path;
   defines: Map<string, string>;
   components: string[];
-  libraryClasses: string[];
+  libraryClasses: IDscLibClass[];
 }
 
 // DECs are a subset of INFs
 export interface DecData {
   includes: string[];
-  infPath: string;
+  infPath: Path;
   defines: Map<string, string>;
   components: string[];
-  libraryClasses: string[];
+  libraryClasses: IDscLibClass[];
 }
 
 // a reduced, simplified version of all the DSC data - all conditionals are evaluated removed so everything applies

@@ -129,7 +129,7 @@ export class InfStore {
             (inf) => inf.startsWith(root.toString())
         );
         return Promise.all(
-            infs.map((path) => InfPaser.ParseInf(path.toString()))
+            infs.map((path) => InfPaser.ParseInf(path))
         );
     }
 };
@@ -200,7 +200,7 @@ export class DecStore {
 
     private async ProcessDec(decpath: string) {
         decpath = path.normalize(decpath);
-        const data = await DecPaser.ParseDec(decpath);
+        const data = await DecPaser.ParseDec(new Path(decpath));
         const decFileName = path.basename(decpath);
         const packageName = getPackageFromPath(decpath);
         const packagePath = path.join(packageName,decFileName);

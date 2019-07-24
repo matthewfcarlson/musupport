@@ -11,7 +11,7 @@ import { DecPaser } from './dec_parser';
 
 /***
  * Represents a DEC/DSC package
- * A package may include zero or more components (.inf), library classes, or PCDs. 
+ * A package may include zero or more components or library classes
  */
 export class Package {
     private workspace: vscode.WorkspaceFolder;
@@ -26,7 +26,7 @@ export class Package {
     libraries: LibraryStore;
 
     // Libraries exported by this package's DEC file
-    //exportedLibraries: Library[];
+    exportedLibraries: Library[];
 
     // Libraries built by this package's DSC file
     //includedLibraries: Library[];
@@ -96,7 +96,7 @@ export class Package {
 
     static async createFromDec(decFile: Path, workspace: vscode.WorkspaceFolder) {
         // DEC is required, DSC is optional.
-        let dec: DecData = await DecPaser.ParseDec(decFile.toString());
+        let dec: DecData = await DecPaser.ParseDec(decFile);
         if (dec) {
             // Check to see if there's a corresponding DSC file
             let dsc: IDscData;
@@ -125,6 +125,7 @@ export class Package {
         this.dsc = dscData;
         this.dscExtended = extendedData;
         this.libraries = new LibraryStore(this.workspace);
+        this.exportedLibraries = [];
         this.isProject = false;
 
         if (this.dec) {
@@ -134,7 +135,13 @@ export class Package {
             }
 
             if (!this.name && this.dec.infPath) {
-                this.name = path.basename(this.dec.infPath);
+                this.name = this.dec.infPath.basename;
+            }
+
+            if (this.dec.libraryClasses) {
+                for (let lib of this.dec.libraryClasses) {
+                    this.exportedLibraries.push(new Library(lib, this)); // TODO: Pull library from LibraryStore
+                }
             }
         }
 
@@ -180,7 +187,7 @@ export class Package {
 }
 
 /**
- * Represents a INF component (PEI/DXE/SMM Driver/Application)
+ * Represents an INF component (PEI/DXE/SMM Driver/Application)
  */
 export class Component {
     name: string;
@@ -201,6 +208,9 @@ export class Component {
     }
 }
 
+/**
+ * Represents an INF library
+ */
 export class Library {
     name: string;
     class: string;
@@ -212,7 +222,7 @@ export class Library {
 
     static async parseInf(infFile: Path) : Promise<Library> {
         try {
-            return Library.fromInfData(await InfPaser.ParseInf(infFile.toString()));
+            return Library.fromInfData(await InfPaser.ParseInf(infFile));
         } catch (e) {
             logger.error(`Error parsing INF: ${infFile} - ${e}`);
         }
