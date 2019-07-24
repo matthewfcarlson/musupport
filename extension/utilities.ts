@@ -257,3 +257,21 @@ export function showError(message: string) {
   logger.error(message);
   return vscode.window.showInformationMessage('MU: ' + message);
 }
+
+export class Path extends String {
+  get isAbsolute(): boolean { return path.isAbsolute(this.toString()); }
+  get basename(): string { return path.basename(this.toString()); }
+  get dirname(): string { return path.dirname(this.toString()); }
+  get parent(): Path { return new Path(path.resolve(this.toString() + '/..')); }
+
+  toUri(): vscode.Uri {
+    if (!this.isAbsolute) {
+      throw new Error(`Path '${this} cannot be converted to URI - path is not absolute`);
+    }
+    return vscode.Uri.file(this.toString());
+  }
+
+  join(other: Path): Path {
+    return new Path(path.join(this.toString(), other.toString()));
+  }
+}

@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { IDscData, IDscDataExtended, IDscComponent } from "./types";
+import * as utils from '../utilities';
+import { Path } from '../utilities';
 
 /***
  * Represents a DSC package
@@ -11,8 +13,9 @@ export class DscPackage {
     data: IDscData;
     extendedData: IDscDataExtended;
 
-    get fileName(): string { return (this.filePath) ? path.basename(this.filePath.fsPath) : null; }
-    get filePath(): vscode.Uri { return (this.data) ? this.data.filePath : null; }
+    get fileName(): string { return (this.filePath) ? this.filePath.basename : null; }
+    get filePath(): Path { return (this.data) ? new Path(this.data.filePath.fsPath) : null; }
+    get packageRoot(): Path { return (this.filePath) ? this.filePath.parent : null; }
 
     /**
      * Returns a flattened list of components referenced in the DSC.
@@ -31,7 +34,7 @@ export class DscPackage {
                         libraryClasses: null,
                         source: null
                     };
-                    items.push(new DscComponent(comp));
+                    items.push(new DscComponent(comp, this, null)); // TODO: Name should come from INF
                 }
             }
             return items;
@@ -54,12 +57,23 @@ export class DscPackage {
                         libraryClasses: null,
                         source: null
                     };
-                    items.push(new DscLibraryClass(lib, name.toString()));
+                    items.push(new DscLibraryClass(lib, this, name.toString()));
                 }
             }
             return items;
         }
         return null;
+    }
+
+    /**
+     * Resolve a relative path defined in this DSC package
+     * @param path 
+     */
+    resolvePath(pkgPath: Path): Path {
+        if (!pkgPath.isAbsolute) {
+            pkgPath = this.packageRoot.join(pkgPath);
+        }
+        return pkgPath;
     }
 
     constructor(data: IDscData, extendedData: IDscDataExtended = null) {
@@ -94,34 +108,49 @@ export class DscPackage {
 export class DscComponent {
     name: string;
     data: IDscComponent;
+    filePath: Path;
 
-    get filePath(): vscode.Uri { 
-        return (this.data.infPath) ? vscode.Uri.file(this.data.infPath.toString()) : null; 
-    }
-
-    constructor(data: IDscComponent) {
+    constructor(data: IDscComponent, pkg: DscPackage = null, name: string = null) {
         this.data = data;
+        this.name = name;
 
-        this.name = path.basename(data.infPath.toString()); // TODO: Should come from parsed INF
+        if (data) {
+            if (data.infPath && pkg) {
+                this.filePath = new Path(data.infPath);
+            }
+
+            if (!this.name && this.filePath) {
+                this.name = path.basename(this.filePath.toString());
+            }
+        }
     }
 }
 
 export class DscLibraryClass {
     name: string;
     data: IDscComponent;
-
-    get filePath(): vscode.Uri { 
-        return (this.data.infPath) ? vscode.Uri.file(this.data.infPath.toString()) : null; 
-    }
+    filePath: Path;
+    dsc: DscPackage;
 
     get archs() { return this.data.archs; }
+    get absoluteFilePath() { return (this.dsc && this.filePath) ? (this.dsc.resolvePath(this.filePath)) : null; }
 
-    constructor(data: IDscComponent, name: string) { // TODO: Is this the right interface?
+    constructor(data: IDscComponent, dsc: DscPackage = null, name: string = null) { // TODO: Is this the right interface?
         this.data = data;
         this.name = name;
-        // if (data) {
-        //     this.name = path.basename(data.infPath.toString());
-        // }
+        this.dsc = dsc;
+
+        if (data) {
+            if (data) {
+                if (data.infPath && dsc) {
+                    this.filePath = new Path(data.infPath);
+                }
+    
+                if (!this.name && this.filePath) {
+                    this.name = this.filePath.basename;
+                }
+            }
+        }
     }
 }
 
@@ -146,7 +175,7 @@ export class LibraryClassStore {
         if (cls) {
             // Add library class to dictionary
             let entries = this.classes.get(cls.name) || new Map<string, DscLibraryClass>();
-            entries.set(cls.filePath.fsPath, cls);
+            entries.set(cls.filePath.toString(), cls);
             this.classes.set(cls.name, entries);
         }
     }

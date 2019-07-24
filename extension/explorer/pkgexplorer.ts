@@ -100,6 +100,6 @@ export class PackageTreeProvider implements vscode.TreeDataProvider<Node> {
 
     private navigateToPackageFile(pkg: DscPackage) {
         logger.info(`Selected package: ${pkg.filePath}`);
-        vscode.window.showTextDocument(pkg.filePath, { preserveFocus: true });
+        vscode.window.showTextDocument(pkg.filePath.toUri(), { preserveFocus: true });
     }
 }

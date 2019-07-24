@@ -40,7 +40,7 @@ export class PkgNode extends Node {
 
     contextValue = 'mu-pkg';
 
-    get tooltip() : string { return (this.pkg.filePath) ? this.pkg.filePath.fsPath : null; }
+    get tooltip() : string { return (this.pkg.filePath) ? this.pkg.filePath.toString() : null; }
 
     get description() : string { return this.pkg.fileName; }
 
@@ -93,7 +93,7 @@ export class LibraryClassNode extends Node {
         super(libraryClass.name, false, selectCommand);
     }
 
-    get tooltip(): string { return (this.libraryClass.filePath) ? this.libraryClass.filePath.fsPath : null; }
+    get tooltip(): string { return (this.libraryClass.filePath) ? this.libraryClass.filePath.toString() : null; }
 
     // get description(): string { 
     //     // eg. "[IA32,X64]"
@@ -115,19 +115,21 @@ export class LibraryClassCollectionNode extends Node {
     }
 
     getChildren(): Thenable<Node[]> {
-        return Promise.resolve(this.libraryClasses.map((cls) => new LibraryClassUsageNode(cls, this.selectCommand)));
+        return Promise.resolve(this.libraryClasses.map((cls) => new LibraryClassFileNode(cls, this.selectCommand)));
     }
 }
 
-export class LibraryClassUsageNode extends Node {
+export class LibraryClassFileNode extends Node {
     constructor(
         public readonly libraryClass: DscLibraryClass,
         protected readonly selectCommand: string = null
     ) {
-        super(libraryClass.filePath.fsPath, false, selectCommand);
+        super(libraryClass.filePath.toString(), false, selectCommand);
     }
 
-    // TODO: When selected, this should navigate to where the library class is used
+    get tooltip(): string { return `${this.libraryClass.absoluteFilePath}`; }
+
+    contextValue = 'mu-inf';
 }
 
 export class ComponentNode extends Node {
@@ -138,7 +140,7 @@ export class ComponentNode extends Node {
         super(component.name, false, selectCommand);
     }
 
-    get tooltip(): string { return (this.component.filePath) ? this.component.filePath.fsPath : null; }
+    get tooltip(): string { return (this.component.filePath) ? this.component.filePath.toString() : null; }
 
     // get description(): string { 
     //     // eg. "[IA32,X64]"
