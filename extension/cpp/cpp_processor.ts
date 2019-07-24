@@ -124,8 +124,8 @@ export class CppProcessor {
 
     public async RefreshWorkspace() {
         //refresh the inf's
-        await this.decStore.Scan();
-        await this.infStore.Scan();
+        await this.decStore.scan();
+        await this.infStore.scan();
 
     }
 

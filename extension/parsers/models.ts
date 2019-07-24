@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { IDscData, IDscDataExtended, IComponent, IDscLibClass } from "./types";
+import { IDscData, IDscDataExtended, IComponent, IDscLibClass, InfData } from "./types";
 import * as utils from '../utilities';
 import { Path } from '../utilities';
 import { InfPaser } from './inf_parser';
 import { logger } from '../logger';
-import { LibraryStore } from '../data_store';
+import { LibraryStore, InfStore } from '../data_store';
+import { DscPaser } from '../dsc/parser';
 
 /***
  * Represents a DEC/DSC package
@@ -69,6 +70,50 @@ export class Package {
         this.libraries.add(lib);
     }
 
+    async scanLibraries(infStore: InfStore) {
+        let infs = await infStore.getInfsInPath(this.packageRoot);
+        if (infs) {
+            for (let inf of infs) {
+                let lib = Library.fromInfData(inf);
+                if (lib) {
+                    this.libraries.add(lib);
+                }
+            }
+        }
+    }
+
+    static async createFromDsc(dscFile: Path, infFiles: Path[], workspace: vscode.WorkspaceFolder) {
+        let dsc: IDscData = await DscPaser.Parse(dscFile.toUri(), workspace.uri);
+        if (dsc) {
+            // TODO
+            // if (dsc.errors) {
+            //     logger.error(`Could not parse DSC: ${dsc.errors}`); // TODO: Verify formatting
+            //     continue;
+            // }
+
+            // INF libraries built by the DSC
+            // for (let lib of pkg.libraryClasses) {
+            //     this.libraryClassStore.add(lib);
+            // }
+
+            // Look for INF libraries contained within the package root
+            // TODO: Edge case - what if the a DEC package is defined inside another DEC package?
+            // let libs = infFiles.filter((f) => f.startsWith(pkg.packageRoot.toString()));
+            // for (let infPath of libs) {
+            //     let lib = await Library.parseInf(infPath);
+            //     if (lib) {
+            //         // Add to package's known libraries
+            //         pkg.addLibrary(lib);
+
+            //         // Also add to global library store
+            //         this.libraryClassStore.add(lib);
+            //     }
+            // }
+
+            return new Package(workspace, dsc);
+        }
+    }
+
     constructor(workspace: vscode.WorkspaceFolder, data: IDscData, extendedData: IDscDataExtended = null) {
         this.workspace = workspace;
         this.data = data;
@@ -130,44 +175,48 @@ export class Library {
 
     static async parseInf(infFile: Path) : Promise<Library> {
         try {
-            let info = await InfPaser.ParseInf(infFile.toString());
-            if (info && info.defines) {
-                let comp: IDscLibClass = {
-                    name: infFile.basename,
-                    class: null,
-                    infPath: infFile,
-                    archs: [], // TODO: Populate from INF
-                    source: null
-                };
-
-                // Get the library class
-                let lclass: string = info.defines.get('LIBRARY_CLASS')
-                if (!lclass) {
-                    // This INF is not a library!
-                    return null;
-                }
-
-                if (lclass.indexOf('|') > 0) {
-                    let [def_classname, def_classtypes] = lclass.split('|');
-                    if (def_classname) {
-                        comp.class = def_classname.trim();
-                    }
-                } else {
-                    comp.class = lclass.trim();
-                }
-
-                // Get the INF basename
-                let def_basename = info.defines.get('BASE_NAME');
-                if (def_basename) {
-                    comp.name = def_basename.trim();
-                }
-
-                return new Library(comp);
-            }
+            return Library.fromInfData(await InfPaser.ParseInf(infFile.toString()));
         } catch (e) {
             logger.error(`Error parsing INF: ${infFile} - ${e}`);
         }
         return null;
+    }
+
+    static fromInfData(info: InfData) : Library {
+        if (info && info.defines) {
+            let infPath = new Path(info.infPath);
+            let comp: IDscLibClass = {
+                name: infPath.basename,
+                class: null,
+                infPath: infPath,
+                archs: [], // TODO: Populate from INF
+                source: null
+            };
+
+            // Get the library class
+            let lclass: string = info.defines.get('LIBRARY_CLASS')
+            if (!lclass) {
+                // This INF is not a library!
+                return null;
+            }
+
+            if (lclass.indexOf('|') > 0) {
+                let [def_classname, def_classtypes] = lclass.split('|');
+                if (def_classname) {
+                    comp.class = def_classname.trim();
+                }
+            } else {
+                comp.class = lclass.trim();
+            }
+
+            // Get the INF basename
+            let def_basename = info.defines.get('BASE_NAME');
+            if (def_basename) {
+                comp.name = def_basename.trim();
+            }
+
+            return new Library(comp);
+        }
     }
 
     constructor(data: IDscLibClass, pkg: Package = null) {

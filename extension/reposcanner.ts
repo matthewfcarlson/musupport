@@ -9,7 +9,7 @@ import { InfData, DecData, IDscDataExtended, IDscData, IComponent, DscArch, ISou
 import { DscPaser } from './dsc/parser';
 import { Package, Library } from './parsers/models';
 import { Path } from './utilities';
-import { PackageStore, LibraryStore } from './data_store';
+import { PackageStore, LibraryStore, InfStore } from './data_store';
 
 /***
  * Represents a PCD entry in a DSC
@@ -39,24 +39,18 @@ export class RepoScanner implements vscode.Disposable {
     // public components: ComponentDefinition[];
     // public libraryClasses: LibraryClassDefinition[];
 
+    public infStore:            InfStore;
     public projects:            Set<ProjectDefinition>;
     public packageStore:       PackageStore;
     public libraryClassStore:   LibraryStore;
 
     constructor(private readonly workspace: vscode.WorkspaceFolder) {
+        this.infStore           = new InfStore(workspace);
         this.projects           = new Set<ProjectDefinition>();
         this.libraryClassStore  = new LibraryStore(workspace);
         this.packageStore       = new PackageStore(workspace, this.libraryClassStore);
 
-        const config = vscode.workspace.getConfiguration(null, null);
-        this.packageStore.onPackageDiscovered(async (pkg) => {
-            this._onPackageDiscovered.fire(pkg); // forward event
-
-            const platformDsc: string = config.get('musupport.platformDsc');
-            if (platformDsc && (pkg.fileName == platformDsc)) {
-                await this.discoveredProject(pkg);
-            }
-        });
+        this.packageStore.onPackageDiscovered((pkg) => { this.packageDiscovered(pkg); });
     }
 
     dispose() {
@@ -66,6 +60,7 @@ export class RepoScanner implements vscode.Disposable {
     }
 
     private clear() {
+        this.infStore.clear();
         this.projects.clear();
         this.packageStore.clear();
         this.libraryClassStore.clear();
@@ -73,11 +68,29 @@ export class RepoScanner implements vscode.Disposable {
 
     async scan() {
         this.clear();
-        
+
+        // Find all INFs in the workspace
+        await this.infStore.scan();
+
+        // Load all Libraries found in the workspace
+        // NOTE: This will find ALL libraries, not just those referenced by a DSC/DEC package.
         await this.libraryClassStore.scanForLibraries();
         this._onLibrariesDiscovered.fire(null);
 
-        await this.packageStore.scanForPackages();
+        // Find all DEC packages in the workspace,
+        // and the libraries/components that they include & export.
+        await this.packageStore.scanForPackages(this.infStore);
+    }
+
+    private async packageDiscovered(pkg: Package) {
+        this._onPackageDiscovered.fire(pkg); // forward event
+
+        // Look for project packages as the workspace is scanning for DEC/DSCs
+        const config = vscode.workspace.getConfiguration(null, null);
+        const platformDsc: string = config.get('musupport.platformDsc');
+        if (platformDsc && (pkg.fileName == platformDsc)) {
+            await this.discoveredProject(pkg);
+        }
     }
 
     private async discoveredProject(pkg: Package) {
@@ -88,47 +101,6 @@ export class RepoScanner implements vscode.Disposable {
         logger.info(`Project Found: ${proj.projectName} @ ${proj.platformDscPath}`);
         this._onProjectDiscovered.fire(proj);
     }
-
-    // private async scanForProjects() {
-        
-    //     const platformDsc: string = config.get('musupport.platformDsc');
-    //     if (!platformDsc) {
-    //         utils.showError('musupport.platformDsc is not defined');
-    //     }
-
-    //     let projectPackages = this.packageStore.getPackagesByFilename(platformDsc);
-    //     if (projectPackages) {
-    //         for (let pkg of projectPackages) {
-
-    //         }
-    //     }
-    // }
-
-    // private async scanForPackages() {
-    //     try {
-    //         // TODO: If project is selected, filter search path to only those that the project references.
-
-
-    //         this.clear();
-
-
-
-
-    //         if (decFiles) {
-    //             for (let uri of decFiles) {
-    //                 let def: Package;
-    //                 let dscPath = uri;
-    //                 let dscParentPath = vscode.Uri.file(path.dirname(uri.fsPath));
-
-    //                 let dsc: IDscData = await DscPaser.Parse(dscPath, this.workspace.uri);
-    //                 if (dsc) {
-
-
-    //     } catch (e) {
-    //         logger.error(`Error scanning packages: ${e}`, e);
-    //         throw e;
-    //     }
-    // }
 
     private async createProjectDefFromDsc(uri: vscode.Uri) : Promise<ProjectDefinition> {
         if (!uri) {

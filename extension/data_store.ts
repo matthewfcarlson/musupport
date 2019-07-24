@@ -15,6 +15,7 @@ import { DscPaser } from "./dsc/parser";
  */
 export class InfStore {
     private workspace: vscode.WorkspaceFolder;
+    private infFiles: Path[];
     private infs: Map<string, InfData>;
     //this keeps track of an inf(value) for the source file (key)
     private infsForSource: Map<string, InfData[]>;
@@ -22,10 +23,11 @@ export class InfStore {
     //
     private scanInProgress = false;
     constructor(workspace: vscode.WorkspaceFolder) {
+        this.infFiles = [];
         this.infs = new Map();
         this.infsForSource = new Map();
         this.workspace = workspace;
-        this.Clear();
+        this.clear();
     }
 
     public HasInfForFile(uri: vscode.Uri): boolean {
@@ -46,62 +48,86 @@ export class InfStore {
      * Clears the relationship for a given URI
      * @param uri if not specified, clear all relationships
      */
-    public Clear(uri?: vscode.Uri) {
+    public clear(uri?: vscode.Uri) {
         logger.info("INF_STORE Clearing data");
         if (uri) {
             logger.error("INF_STORE clearing for specific URI is not supported")
         }
         else {
+            this.infFiles = [];
             this.infs.clear();
             this.infsForSource.clear();
         }
     }
 
-    private async WaitForScanToFinish() {
-        logger.info("INF_STORE: Waiting for scan to finish");
-        var waitTimer = 50;
-        while (this.scanInProgress) { //busy loop
-            await delay(waitTimer);
-            waitTimer *= 1.4; //increase the wait timer each time
-        }
+    // private async WaitForScanToFinish() {
+    //     logger.info("INF_STORE: Waiting for scan to finish");
+    //     var waitTimer = 50;
+    //     while (this.scanInProgress) { //busy loop
+    //         await delay(waitTimer);
+    //         waitTimer *= 1.4; //increase the wait timer each time
+    //     }
+    // }
+
+    // public async Scan(uri?: vscode.Uri) {
+    //     if (this.scanInProgress) await this.WaitForScanToFinish();
+    //     this.scanInProgress = true;
+    //     //TODO make sure that the uri isn't a file (make sure it is a directory)
+    //     const basePath = (uri) ? uri.fsPath : this.workspace.uri.fsPath;
+
+    //     logger.info("INF_STORE: Scanning workspace ")
+
+    //     const infFiles = await promisifyGlob(path.join(basePath, "!(Build)", "**", "*.inf"));
+    //     logger.info("INF_STORE: processing " + infFiles.length + " inf files");
+
+    //     //keep track of all the calls we've made
+    //     const asyncCalls = [];
+    //     for (const single_file of infFiles) {
+    //         asyncCalls.push(this.ProcessInf(single_file));
+    //     }
+    //     await Promise.all(asyncCalls);
+
+    //     logger.info("INF_STORE: Finished Scanning");
+    //     this.scanInProgress = false;
+
+    // }
+
+    // private async ProcessInf(path: string): Promise<void> {
+    //     //keep track of the INF
+    //     const data = await InfPaser.ParseInf(path);
+    //     for (const source of data.sources) {
+    //         if (!this.infsForSource.has(source)) this.infsForSource.set(source, []);
+    //         this.infsForSource.get(source).unshift(data);
+    //     }
+    //     if (!this.infs.has(path)) this.infs.set(path, data);
+
+
+    //     //logger.info("INFSTORE data", data);
+    // }
+
+    /**
+     * Find all INFs in the workspace, but do not load them
+     */
+    public async scan() {
+        // NOTE: It is faster to do a single batch search than many individual searches.
+        this.infFiles = (await vscode.workspace.findFiles('**/*.inf'))
+            .map((f) => new Path(f.fsPath));
     }
 
-    public async Scan(uri?: vscode.Uri) {
-        if (this.scanInProgress) await this.WaitForScanToFinish();
-        this.scanInProgress = true;
-        //TODO make sure that the uri isn't a file (make sure it is a directory)
-        const basePath = (uri) ? uri.fsPath : this.workspace.uri.fsPath;
+    /**
+     * Get all INFs under a path, and load the INF data
+     * @param root The path to search
+     */
+    public async getInfsInPath(root: Path) : Promise<InfData[]> {
+        if (!this.infFiles) return null;
 
-        logger.info("INF_STORE: Scanning workspace ")
-
-        const infFiles = await promisifyGlob(path.join(basePath, "!(Build)", "**", "*.inf"));
-        logger.info("INF_STORE: processing " + infFiles.length + " inf files");
-
-        //keep track of all the calls we've made
-        const asyncCalls = [];
-        for (const single_file of infFiles) {
-            asyncCalls.push(this.ProcessInf(single_file));
-        }
-        await Promise.all(asyncCalls);
-
-        logger.info("INF_STORE: Finished Scanning");
-        this.scanInProgress = false;
-
+        let infs = this.infFiles.filter(
+            (inf) => inf.startsWith(root.toString())
+        );
+        return Promise.all(
+            infs.map((path) => InfPaser.ParseInf(path.toString()))
+        );
     }
-    private async ProcessInf(path: string): Promise<void> {
-        //keep track of the INF
-        const data = await InfPaser.ParseInf(path);
-        for (const source of data.sources) {
-            if (!this.infsForSource.has(source)) this.infsForSource.set(source, []);
-            this.infsForSource.get(source).unshift(data);
-        }
-        if (!this.infs.has(path)) this.infs.set(path, data);
-
-
-        //logger.info("INFSTORE data", data);
-    }
-
-
 };
 
 export class DecStore {
@@ -113,7 +139,7 @@ export class DecStore {
     constructor(workspace: vscode.WorkspaceFolder) {
         this.workspace = workspace;
         this.decs = new Map();
-        this.Clear();
+        this.clear();
     }
 
     /**
@@ -131,7 +157,7 @@ export class DecStore {
     * Clears the relationship for a given URI
     * @param uri if not specified, clear all relationships
     */
-    public Clear(uri?: string) {
+    public clear(uri?: string) {
         if (uri) {
             logger.error("DEC_STORE clearing for specific URI is not supported")
         }
@@ -149,7 +175,7 @@ export class DecStore {
         }
     }
 
-    public async Scan(uri?: vscode.Uri) {
+    public async scan(uri?: vscode.Uri) {
         if (this.scanInProgress) await this.WaitForScanToFinish();
         this.scanInProgress = true;
         //TODO make sure that the uri isn't a file (make sure it is a directory)
@@ -188,7 +214,8 @@ export class DecStore {
 }
 
 /***
- * Keeps track of all DEC packages in the workspace
+ * Keeps track of all DEC packages in the workspace, 
+ * and the libraries that they include & export
  */
 export class PackageStore {
     private readonly _onPackageDiscovered: vscode.EventEmitter<Package> = new vscode.EventEmitter<Package>();
@@ -224,74 +251,29 @@ export class PackageStore {
         return this.packages;
     }
 
-    // getPackagesByFilename(name: string) : Package[] {
-    //     return this.packages.filter((pkg) => pkg.fileName == name);
-    // }
-
-    public async scanForPackages(root: vscode.Uri = null) {
-        const basePath = (root) ? root.fsPath : null;
+    public async scanForPackages(infStore: InfStore) {
         logger.info("PACKAGE_STORE: Scanning workspace ")
 
         // Find all DSC files in the workspace that match the specified glob
-        let decFiles = (await vscode.workspace.findFiles('**/*.dsc'))
+        // TODO: Use DEC+DSC files instead
+        let dscFiles = (await vscode.workspace.findFiles('**/*.dsc'))
             .map((f) => new Path(f.fsPath));
 
-        for (let dscFile of decFiles) {
+        for (let dscFile of dscFiles) {
             //let dscFile = new Path(path.basename(decFile.toString(), '.dec') + '.dsc');
 
             // TODO: Parse DEC file as well...
+            let pkg = await Package.createFromDsc(dscFile, [], this.workspace);
+            if (pkg) {
+                logger.info(`Discovered Package: ${pkg.filePath}`);
 
-            let dsc: IDscData = await DscPaser.Parse(dscFile.toUri(), this.workspace.uri);
-            if (dsc) {
-                // TODO
-                // if (dsc.errors) {
-                //     logger.error(`Could not parse DSC: ${dsc.errors}`); // TODO: Verify formatting
-                //     continue;
-                // }
-
-                logger.info(`Discovered Package: ${dsc.filePath.fsPath}`);
-                let pkg = new Package(this.workspace, dsc);
-
-                // INF libraries built by the DSC
-                // for (let lib of pkg.libraryClasses) {
-                //     this.libraryClassStore.add(lib);
-                // }
-
-                // Look for INF libraries contained within the package root
-                // TODO: Edge case - what if the a DEC package is defined inside another DEC package?
-                // let libs = infFiles.filter((f) => f.startsWith(pkg.packageRoot.toString()));
-                // for (let infPath of libs) {
-                //     let lib = await Library.parseInf(infPath);
-                //     if (lib) {
-                //         // Add to package's known libraries
-                //         pkg.addLibrary(lib);
-
-                //         // Also add to global library store
-                //         this.libraryClassStore.add(lib);
-                //     }
-                // }
+                await pkg.scanLibraries(infStore);
 
                 this.add(pkg);
-
             } else {
-                logger.error(`Could not load DSC file: ${dscFile}`);
+                logger.error(`Could not load DSC package: ${dscFile}`);
             }
-
-
         }
-        
-
-        //scan dec files
-        // const decFiles = await promisifyGlob(path.join(basePath, "**", "PlatformPkg.dsc"));
-        // for (const single_file of decFiles) {
-        //     const single_dir = path.dirname(single_file);
-        //     const packageName = path.basename(single_dir);
-        //     data.add(packageName);
-        // }
-
-        // const listData = Array.from(data);
-
-        // return listData;
     }
 }
 
@@ -321,6 +303,11 @@ export class LibraryStore {
         this.class_map.clear();
     }
 
+    async addFromFile(infFile: Path) {
+        let lib = await Library.parseInf(infFile);
+        if (lib) { this.add(lib); }
+    }
+
     add(lib: Library) {
         if (lib && lib.filePath) {
             this.files.push(lib.filePath);
@@ -339,6 +326,12 @@ export class LibraryStore {
 
     get classes(): string[] {
         return Array.from(this.class_map.keys());
+    }
+
+    getLibrariesInPath(root: Path) {
+        return this.libraries.filter((lib) => 
+            lib.filePath.startsWith(root.toString())
+        );
     }
 
     getLibrariesForArch(arch) {
@@ -370,12 +363,10 @@ export class LibraryStore {
             let infFiles = (await vscode.workspace.findFiles('**/*.inf'))
                 .map((f) => new Path(f.fsPath));
 
+                
             for (let infFile of infFiles) {
                 if (infFile) {
-                    let lib = await Library.parseInf(infFile);
-                    if (lib) {
-                        this.add(lib);
-                    }
+                    await this.addFromFile(infFile);
                 }
             }
 
