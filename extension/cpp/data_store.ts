@@ -78,8 +78,16 @@ export class InfStore {
         }
     }
 
+    // Given a partial match, return all the possible matches
     public GetPossibleParitalMatches(partial:string):string[]{
-        return [];
+        let match_iter = this.possibleInfPaths.values();
+        let matches = [];
+        for (const item of match_iter) {
+            if (item.startsWith(partial)){
+                matches.push(item);
+            }
+        }
+        return matches;
     }
 
     public async Scan(uri?: vscode.Uri) {
@@ -97,8 +105,9 @@ export class InfStore {
         const asyncCalls = [];
         for (const single_file of infFiles) {
             asyncCalls.push(this.ProcessInf(single_file));
-            let possiblePath = single_file.replace(path.sep,"/").split("/");
+            let possiblePath = single_file.replace(path.sep,"/").substring(basePath.length).split("/");
             //Add all possible paths to our set
+            //Remove the basepath
             while (possiblePath.length > 2){
                 this.possibleInfPaths.add(possiblePath.join("/"));
                 logger.info("Adding possible Path"+possiblePath.join("/"));
@@ -108,7 +117,7 @@ export class InfStore {
         await Promise.all(asyncCalls);
 
         logger.info("INF_STORE: Finished Scanning");
-        logger.info("All possible paths", this.possibleInfPaths)
+        //logger.info("All possible paths", this.possibleInfPaths)
         this.scanInProgress = false;
 
     }
