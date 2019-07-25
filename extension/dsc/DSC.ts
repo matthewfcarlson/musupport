@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { logger } from '../logger';
 import { delay } from '../utilities';
 import { InfStore } from '../cpp/data_store';
+import { DscParser } from './parser';
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -42,13 +43,17 @@ class DscCompletionItemProvider implements vscode.CompletionItemProvider {
 
         for(const possible_match of maybe_matches){
           //logger.info("A possible match would be "+possible_match);
-          completions.push(new vscode.CompletionItem(possible_match, vscode.CompletionItemKind.Reference));
+          completions.push(new vscode.CompletionItem(possible_match, vscode.CompletionItemKind.File));
         }
       }
     }
-    else if (text.startsWith("[")) {
-      //we need to figure out what we're going to offer as suggestions
-      completions.push(new vscode.CompletionItem("Defines", vscode.CompletionItemKind.Text));
+    // If we need to suggest the beginning of a section
+    else if (text.startsWith("[") && text.indexOf(".") == -1) {
+      //Get all the possible sections we could offer
+      let sections = DscParser.GetPossibleSections();
+      for (const section in sections) {
+        completions.push(new vscode.CompletionItem(section, vscode.CompletionItemKind.Enum));
+      }
     }
     
 
