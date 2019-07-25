@@ -6,7 +6,7 @@ import { ProjectDefinition, ProjectManager } from './projectmanager';
 import { stringify } from 'querystring';
 import { logger } from './logger';
 import { InfData, DecData, IDscDataExtended, IDscData, IDscComponent, DscArch, ISourceInfo, DscLibClass } from "./parsers/types";
-import { DscPaser } from './dsc/parser';
+import { DscParser } from './dsc/parser';
 import { DscPackage } from './parsers/models';
 
 /***
@@ -56,7 +56,7 @@ export class RepoScanner implements vscode.Disposable {
                 let dscPath = uri;
                 let dscParentPath = vscode.Uri.file(path.dirname(uri.fsPath));
 
-                let dsc: IDscData = await DscPaser.Parse(dscPath, this.workspace.uri);
+                let dsc: IDscData = await DscParser.Parse(dscPath, this.workspace.uri);
                 if (dsc) {
                     // if (dsc.errors) {
                     //     logger.error(`Could not parse DSC: ${dsc.errors}`); // TODO: Verify formatting
