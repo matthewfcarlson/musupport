@@ -47,7 +47,7 @@ export class CppProcessor {
 
     constructor(workspace: vscode.WorkspaceFolder) {
         this.workspace = workspace;
-        this.infStore = new InfStore(workspace);
+        this.infStore = InfStore.SetupStore(workspace);
         this.decStore = new DecStore(workspace);
         const fsPath = workspace.uri.fsPath;
         this.active = containsMuProjects(fsPath);

@@ -11,19 +11,32 @@ import { PathLike } from "fs";
 /**
  * This class stores the relationship between a given file and the inf
  */
+//TODO make this a map or an array to handle multiple workspaces
+let _SharedInfStore: InfStore;
+
 export class InfStore {
     private workspace: vscode.WorkspaceFolder;
     private infs: Map<string, InfData>;
+    private possibleInfPaths: Set<String>;
     //this keeps track of an inf(value) for the source file (key)
     private infsForSource: Map<string, InfData[]>;
     //need some way to keep track of file => inf's
-    //
+
     private scanInProgress = false;
-    constructor(workspace: vscode.WorkspaceFolder) {
+    private constructor(workspace: vscode.WorkspaceFolder) {
         this.infs = new Map();
         this.infsForSource = new Map();
+        this.possibleInfPaths = new Set();
         this.workspace = workspace;
         this.Clear();
+    }
+
+    public static GetStore(): InfStore {
+        return _SharedInfStore;
+    }
+    public static SetupStore(ws: vscode.WorkspaceFolder): InfStore {
+        _SharedInfStore = new InfStore(ws);
+        return _SharedInfStore;
     }
 
     public HasInfForFile(uri: vscode.Uri): boolean {
@@ -52,16 +65,21 @@ export class InfStore {
         else {
             this.infs.clear();
             this.infsForSource.clear();
+            this.possibleInfPaths.clear();
         }
     }
 
     private async WaitForScanToFinish() {
         logger.info("INF_STORE: Waiting for scan to finish");
-        var waitTimer = 50;
+        var waitTimer = 50; //start at 50ms
         while (this.scanInProgress) { //busy loop
             await delay(waitTimer);
             waitTimer *= 1.4; //increase the wait timer each time
         }
+    }
+
+    public GetPossibleParitalMatches(partial:string):string[]{
+        return [];
     }
 
     public async Scan(uri?: vscode.Uri) {
@@ -79,10 +97,18 @@ export class InfStore {
         const asyncCalls = [];
         for (const single_file of infFiles) {
             asyncCalls.push(this.ProcessInf(single_file));
+            let possiblePath = single_file.replace(path.sep,"/").split("/");
+            //Add all possible paths to our set
+            while (possiblePath.length > 2){
+                this.possibleInfPaths.add(possiblePath.join("/"));
+                logger.info("Adding possible Path"+possiblePath.join("/"));
+                possiblePath.shift();
+            }
         }
         await Promise.all(asyncCalls);
 
         logger.info("INF_STORE: Finished Scanning");
+        logger.info("All possible paths", this.possibleInfPaths)
         this.scanInProgress = false;
 
     }
