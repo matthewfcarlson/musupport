@@ -17,7 +17,7 @@ let _SharedInfStore: InfStore;
 export class InfStore {
     private workspace: vscode.WorkspaceFolder;
     private infs: Map<string, InfData>;
-    private possibleInfPaths: Set<String>;
+    private possibleInfPaths: Set<string>;
     //this keeps track of an inf(value) for the source file (key)
     private infsForSource: Map<string, InfData[]>;
     //need some way to keep track of file => inf's

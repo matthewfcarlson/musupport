@@ -19,19 +19,19 @@ export interface DecData {
 // in case of conflicts, first evaluated is taken
 export interface IDscData {
   filePath: Uri;
-  defines: Map<String,String>;
-  libraries: Map<String, Map<String, String>>; // arch -> library name -> library inf uri
-  components: Map<String, String[]>; // arch -> component inf uris
-  pcds: Map<String, Map<String, String>>; // type of PCD -> name -> value
+  defines: Map<string,string>;
+  libraries: Map<string, Map<string, string>>; // arch -> library name -> library inf uri
+  components: Map<string, string[]>; // arch -> component inf uris
+  pcds: Map<string, Map<string, string>>; // type of PCD -> name -> value
 }
 
 export interface IDscDataExtended {
   filePath: Uri;
   defines: IDscDefines[],
-  findDefine: (String)=>IDscDefines[]; //search for a define by name
+  findDefine: (string)=>IDscDefines[]; //search for a define by name
   libraries: DscLibClass[],
   pcds: IDscPcd[],
-  findPcd: (String)=>IDscPcd[];
+  findPcd: (string)=>IDscPcd[];
   toDscData: ()=>IDscData; //returns the DSC data in a simpler format
   errors: IDscError[]
 }
@@ -45,9 +45,9 @@ export interface ISourceInfo {
 
 export interface IDscDefines {
   source: ISourceInfo;
-  key:String;
-  value:String;
-  toString: ()=>String // a function that returns a string
+  key:string;
+  value:string;
+  toString: ()=>string // a function that returns a string
 }
 
 export interface IDscError{
@@ -55,7 +55,7 @@ export interface IDscError{
   text: String;
   error_msg: String;
   isFatal: Boolean;
-  toString: ()=>String // a function that returns a string
+  toString: ()=>string // a function that returns a string
 }
 
 export enum DscPcdType {
@@ -95,33 +95,33 @@ export enum DscSections {
 
 export interface IDscPcd {
   source: ISourceInfo;
-  tokenspace: String;
-  tokenname: String;
+  tokenspace: string;
+  tokenname: string;
   type:DscPcdType; //the type of PCD
   archs: DscArch[];
   id?:Number;
-  variableGuid?:String;
-  toString: ()=>String // a function that returns a string
+  variableGuid?:string;
+  toString: ()=>string // a function that returns a string
 }
 //the conditional
 export interface IDscConditional {
-  conditions: String[]; //a list of all the conditionals that took us to this point
+  conditions: string[]; //a list of all the conditionals that took us to this point
   eval: Boolean; //the result of the evaluation
 }
 
 export interface IDscComponent {
   source: ISourceInfo;
-  infPath: String;
+  infPath: string;
   archs: DscArch[];
   libraryClasses?:DscLibClass[];
-  toString: ()=>String; // a function that returns a string
+  toString: ()=>string; // a function that returns a string
 }
 
 export interface DscLibClass {
   source: ISourceInfo;
-  infPath: String;
+  infPath: string;
   archs: DscArch[];
-  name: String;
+  name: string;
   toString: ()=>String; // a function that returns a string
   //BuildOptions: DscBuildOption[];
 }

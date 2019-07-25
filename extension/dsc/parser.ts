@@ -15,9 +15,9 @@ class DscData {
 }
 
 interface DscLine {
-  line: String,
-  lineNo: Number,
-  columnOffset: Number
+  line: string,
+  lineNo: number,
+  columnOffset: number
 }
 
 interface IParseStack {
@@ -28,15 +28,15 @@ interface IParseStack {
 // A section that we want to parse like Define or 
 interface IParseSection {
   type: DscSections|DscPcdType;
-  kind: String[]; //common, x64, common.PEIM
+  kind: string[]; //common, x64, common.PEIM
 }
 
 export class DscParser {
 
-  private static FindDefine(name:String): IDscDefines[]{
+  private static FindDefine(name:string): IDscDefines[]{
     return [];
   }
-  private static FindPcd(name:String): IDscPcd[]{
+  private static FindPcd(name:string): IDscPcd[]{
     return [];
   }
 
@@ -44,7 +44,7 @@ export class DscParser {
     return null;
   }
 
-  public static GetPossibleSections(): String[] {
+  public static GetPossibleSections(): string[] {
     var validSections: string[] = [];
     for(var n in DscSections) {
       validSections.push(n);
@@ -106,7 +106,7 @@ export class DscParser {
     }
   }
 
-  private static MakeError(msg:String, line:String, source:ISourceInfo, isFatal:Boolean=false): IDscError {
+  private static MakeError(msg:string, line:string, source:ISourceInfo, isFatal:Boolean=false): IDscError {
 
     var result: IDscError = {
       source: source,
@@ -143,7 +143,7 @@ export class DscParser {
       lines: null
     });
 
-    var validSections: string[] = DscParser.GetPossibleSections();
+    var validSections = DscParser.GetPossibleSections();
     var currentSection:IParseSection;
     currentSection.type = null;
     logger.info("Valid Sections:"+validSections);
@@ -236,12 +236,12 @@ export class DscParser {
     if (inf && inf.defines) {
 
       // Flattened list of components
-      let components = new Map<String, String[]>();
+      let components = new Map<string, string[]>();
       components.set('UNKNOWN', inf.components);
 
       // Flattened list of library classes
-      let libraries = new Map<String, Map<String, String>>();
-      let librariesInner = new Map<String, String>();
+      let libraries = new Map<string, Map<string, string>>();
+      let librariesInner = new Map<string, string>();
       for (let lib of inf.libraryClasses) {
         let [name, path] = lib.split('|');
         if (name) { name = name.trim(); }

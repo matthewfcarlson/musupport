@@ -51,7 +51,7 @@ class DscCompletionItemProvider implements vscode.CompletionItemProvider {
     else if (text.startsWith("[") && text.indexOf(".") == -1) {
       //Get all the possible sections we could offer
       let sections = DscParser.GetPossibleSections();
-      for (const section in sections) {
+      for (const section of sections) {
         completions.push(new vscode.CompletionItem(section, vscode.CompletionItemKind.Enum));
       }
     }
