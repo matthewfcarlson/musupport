@@ -1,4 +1,4 @@
-import { IDscData, IDscDataExtended, IDscDefines, IDscPcd, ISourceInfo, IDscError, DscSections, DscPcdType } from '../parsers/types';
+import { IDscData, IDscDataExtended, IDscDefines, IDscPcd, ISourceInfo, IDscError, DscSections, DscPcdType, IComponent } from '../parsers/types';
 import { promisifyReadFile, stringTrimLeft, stringTrimRight, stringTrim, Path } from '../utilities';
 import { logger } from "../logger";
 import * as path from 'path';
@@ -224,38 +224,33 @@ export class DscPaser {
     return data;
   }
   
-  public static async Parse(dscpath: Uri, workspacePath: Uri): Promise<IDscData> {
+  public static async Parse(dscpath: Path, workspacePath: Uri): Promise<IDscData> {
     //TODO eventually write a second reduced parser. For now, just do a full parse and trim it down
     //return (await this.ParseFull(dscpath, workspacePath)).toDscData();
 
     // HACKY INF PARSER
-    let inf = await InfPaser.ParseInf(new Path(dscpath.fsPath));
+    let inf = await InfPaser.ParseInf(dscpath);
     if (inf && inf.defines) {
 
-      // Flattened list of components
-      let components = new Map<String, String[]>();
-      components.set('UNKNOWN', inf.components);
-
-      // Flattened list of library classes
-      let libraries = new Map<String, [String, String][]>();
-      let librariesInner: [String, String][] = [];
-      for (let lib of inf.libraryClasses) {
-        let item: [String, String] = [lib.class, lib.infPath];
-        librariesInner.push(item);
-      }
-      libraries.set('UNKNOWN', librariesInner);
+      let components = inf.components.map((comp) => {
+        let def: IComponent = {
+          archs: null,
+          infPath: new Path(comp),
+          libraryClasses: null,
+          source: null
+        };
+        return def;
+      })
 
       let dsc: IDscData = {
         filePath: dscpath,
         components: components,
-        libraries: libraries,
+        libraries: inf.libraryClasses,
         pcds: null,
-        defines: inf.defines
-      }
+        defines: inf.defines,
+      };
       return dsc;
     }
     return null;
   }
-   
-}   
-      
+}

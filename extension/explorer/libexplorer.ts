@@ -48,6 +48,8 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
             return Promise.resolve([]);
         }
 
+        const showPkgName: boolean = true;
+
         if (element) {
             return element.getChildren();
         }
@@ -55,7 +57,7 @@ export class LibraryClassProvider implements vscode.TreeDataProvider<Node> {
             // 1st-level nodes
             return Promise.resolve(
                 this.repoScanner.libraryStore.getLibrariesGroupedByName()
-                .map(([name, classes]) => new LibraryClassCollectionNode(name, classes, LibraryClassProvider.SELECT_COMMAND)));
+                .map(([name, classes]) => new LibraryClassCollectionNode(name, classes, LibraryClassProvider.SELECT_COMMAND, showPkgName)));
         }
     }
 }

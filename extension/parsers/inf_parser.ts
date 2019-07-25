@@ -1,7 +1,7 @@
 import { promisifyReadFile, stringTrim, Path } from "../utilities";
 import { logger } from "../logger";
 import * as path from 'path';
-import { InfData, IDscLibClass } from "./types";
+import { InfData, IDscLibClass, IDscGuid } from "./types";
 
 export class InfPaser {
     public static async ParseInf(infpath: Path): Promise<InfData> {
@@ -12,6 +12,7 @@ export class InfPaser {
             defines: null,
             sources: [],
             packages: [],
+            protocols: [],
             pcds: [],
             guids: [],
             components: [],
@@ -44,8 +45,8 @@ export class InfPaser {
             if (rawInfData["Defines"] != undefined) data.defines = this.parseMap(rawInfData["Defines"]);
             if (rawInfData["Sources"] != undefined) data.sources = data.sources.concat(rawInfData["Sources"]);
             if (rawInfData["Packages"] != undefined) data.packages = data.packages.concat(rawInfData["Packages"]);
-            if (rawInfData["Protocols"] != undefined) data.guids = data.guids.concat(rawInfData["Protocols"]);
-            if (rawInfData["Guids"] != undefined) data.guids = data.guids.concat(rawInfData["Guids"]);
+            if (rawInfData["Protocols"] != undefined) data.protocols = data.protocols.concat(this.parseGuids(rawInfData["Protocols"]));
+            if (rawInfData["Guids"] != undefined) data.guids = data.guids.concat(this.parseGuids(rawInfData["Guids"]));
             if (rawInfData["Pcd"] != undefined) data.pcds = data.pcds.concat(rawInfData["Pcd"]);
             if (rawInfData["Components"] != undefined) data.components = data.components.concat(this.parseComponent(rawInfData["Components"]));
             if (rawInfData["LibraryClasses"] != undefined) data.libraryClasses = data.libraryClasses.concat(this.parseLibraryClasses(rawInfData["LibraryClasses"], infpath.parent));
@@ -100,6 +101,23 @@ export class InfPaser {
             }
         }
         return map;
+    }
+
+    private static parseGuids(lines: string[]) : IDscGuid[] {
+        let items: IDscGuid[] = [];
+        for (let ln of lines) {
+            let [name, guid] = ln.split('=', 2);
+            if (name) { name = name.trim(); }
+            if (guid) { guid = guid.trim(); }
+            if (name && guid) {
+                let item: IDscGuid = {
+                    name: name,
+                    guid: guid
+                };
+                items.push(item);
+            }
+        }
+        return items;
     }
 
     private static parseComponent(comp: string[]) {

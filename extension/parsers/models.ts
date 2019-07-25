@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { IDscData, IDscDataExtended, IComponent, IDscLibClass, InfData, DecData, DscPcdType } from "./types";
+import { IDscData, IDscDataExtended, IComponent, IDscLibClass, InfData, DecData, DscPcdType, IDscGuid } from "./types";
 import * as utils from '../utilities';
 import { Path } from '../utilities';
 import { InfPaser } from './inf_parser';
@@ -22,14 +22,26 @@ export class Package {
     dscExtended: IDscDataExtended;
     isProject: boolean;
 
-    // Libraries contained within this package (not necessarily referenced in the DSC or DEC)
+    // Libraries referenced by the DSC
     libraries: LibraryStore;
 
-    // Libraries exported by this package's DEC file
-    exportedLibraries: Library[];
+    // DSC references
+    referencedLibraries: Library[];
+    referencedComponents: Component[];
 
-    // Libraries built by this package's DSC file
-    //includedLibraries: Library[];
+    // DEC exports
+    exportedLibraries: Library[];
+    exportedComponents: Component[]; // Components are not usually exported
+
+    get exportedGuids(): IDscGuid[] {
+        return (this.dec) ? this.dec.guids : null;
+    }
+    get exportedProtocols(): IDscGuid[] {
+        return (this.dec) ? this.dec.protocols : null;
+    }
+    get exportedPcds(): string[] {
+        return (this.dec) ? this.dec.pcds : null;
+    }
 
     get dscFilePath(): Path { return (this.dsc) ? new Path(this.dsc.filePath) : null; }
     get decFilePath(): Path { return (this.dec) ? new Path(this.dec.infPath) : null; }
@@ -41,32 +53,37 @@ export class Package {
     /**
      * Returns a flattened list of components referenced in the DSC.
      */
-    get components(): Component[] { 
-        if (this.dec && this.dec.components) {
-            let items: Component[] = [];
+    // get components(): Component[] { 
+    //     if (this.dec && this.dec.components) {
+    //         let items: Component[] = [];
 
-            // Iterate over each architecture
-            for (let [arch, components] of this.dec.components.entries()) {
-                for (let component of components) {
-                    // TODO: Will need to parse the INF component??
-                    let comp: IComponent = {
-                        infPath: new Path(component),
-                        archs: [], // TODO
-                        libraryClasses: null,
-                        source: null
-                    };
-                    items.push(new Component(comp, this, null)); // TODO: Name should come from INF
-                }
-            }
-            return items;
-        }
-        return null;
-    }
+    //         // Iterate over each architecture
+    //         for (let [arch, components] of this.dec.components.entries()) {
+    //             for (let component of components) {
+    //                 // TODO: Will need to parse the INF component??
+    //                 let comp: IComponent = {
+    //                     infPath: new Path(component),
+    //                     archs: [], // TODO
+    //                     libraryClasses: null,
+    //                     source: null
+    //                 };
+    //                 items.push(new Component(comp, this, null)); // TODO: Name should come from INF
+    //             }
+    //         }
+    //         return items;
+    //     }
+    //     return null;
+    // }
 
     get libraryClassesGroupedByName(): Map<string, Library[]> {
         let map = new Map<string, Library[]>();
-        for (let [name, items] of this.libraries.getLibrariesGroupedByName()) {
-            map.set(name, items);
+        // for (let [name, items] of this.libraries.getLibrariesGroupedByName()) {
+        //     map.set(name, items);
+        // }
+        for (let lib of this.referencedLibraries) {
+            let entries = map.get(lib.class) || [];
+            entries.push(lib);
+            map.set(lib.class, entries);
         }
         return map;
     }
@@ -103,7 +120,7 @@ export class Package {
             let dscFile = decFile.replaceExtension('.dsc');
             if (await utils.promisifyExists(dscFile.toString())) {
                 if (dscFile) {
-                    dsc = await DscPaser.Parse(dscFile.toUri(), workspace.uri);
+                    dsc = await DscPaser.Parse(dscFile, workspace.uri);
                 }
             }
             if (dsc) {
@@ -125,7 +142,11 @@ export class Package {
         this.dsc = dscData;
         this.dscExtended = extendedData;
         this.libraries = new LibraryStore(this.workspace);
+
+        this.referencedLibraries = [];
+        this.referencedComponents = [];
         this.exportedLibraries = [];
+        this.exportedComponents = [];
         this.isProject = false;
 
         if (this.dec) {
@@ -143,6 +164,17 @@ export class Package {
                     this.exportedLibraries.push(new Library(lib, this)); // TODO: Pull library from LibraryStore
                 }
             }
+            if (this.dec.components) {
+                for (let comp of this.dec.components) {
+                    let data: IComponent = {
+                        archs: null,
+                        infPath: new Path(comp),
+                        libraryClasses: null,
+                        source: null
+                    };
+                    this.exportedComponents.push(new Component(data, this));
+                }
+            }
         }
 
         if (this.dsc) {
@@ -156,6 +188,18 @@ export class Package {
                 if (def) {
                     this.isProject = true;
                     this.name = def.trim();
+                }
+            }
+
+            if (this.dsc.libraries) {
+                for (let lib of this.dsc.libraries) {
+                    this.referencedLibraries.push(new Library(lib, this)); // TODO: Pull library from LibraryStore
+                }
+            }
+
+            if (this.dsc.components) {
+                for (let comp of this.dsc.components) {
+                    this.referencedComponents.push(new Component(comp, this));
                 }
             }
         }

@@ -6,7 +6,8 @@ export interface InfData {
   sources: string[];
   packages: string[];
   pcds: string[];
-  guids: string[]; // protocols and guids
+  guids: IDscGuid[];
+  protocols: IDscGuid[];
   infPath: Path;
   defines: Map<string, string>;
   components: string[];
@@ -20,17 +21,23 @@ export interface DecData {
   defines: Map<string, string>;
   components: string[];
   libraryClasses: IDscLibClass[];
+  guids: IDscGuid[];
+  protocols: IDscGuid[];
+  pcds: string[];
 }
 
 // a reduced, simplified version of all the DSC data - all conditionals are evaluated removed so everything applies
 // in case of conflicts, first evaluated is taken
 export interface IDscData {
-  filePath: Uri;
-  defines: Map<String,String>;
+  filePath: Path;
+  defines: Map<string, string>;
+  libraries: IDscLibClass[];
+  components: IComponent[];
+  pcds: IDscPcd[];
   //libraries: Map<String, Map<String, String>>; // arch -> library name -> library inf path
-  libraries: Map<String, [String, String][]>; // arch -> list of [library name, library inf path]
-  components: Map<String, String[]>; // arch -> component inf paths
-  pcds: Map<String, Map<String, String>>; // type of PCD -> name -> value
+  //libraries: Map<String, [String, String][]>; // arch -> list of [library name, library inf path]
+  //components: Map<String, String[]>; // arch -> component inf paths
+  //pcds: Map<String, Map<String, String>>; // type of PCD -> name -> value
 }
 
 export interface IDscDataExtended {
@@ -133,4 +140,9 @@ export interface IDscLibClass {
   class: String;
   toString: ()=>String; // a function that returns a string
   //BuildOptions: DscBuildOption[];
+}
+
+export interface IDscGuid {
+  name: string;
+  guid: string;
 }
