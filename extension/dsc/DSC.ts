@@ -41,7 +41,7 @@ class DscCompletionItemProvider implements vscode.CompletionItemProvider {
         const maybe_matches = InfStore.GetStore().GetPossibleParitalMatches(text);
 
         for(const possible_match of maybe_matches){
-          logger.info("A possible match would be "+possible_match);
+          //logger.info("A possible match would be "+possible_match);
           completions.push(new vscode.CompletionItem(possible_match, vscode.CompletionItemKind.Reference));
         }
       }

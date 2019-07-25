@@ -79,11 +79,11 @@ export class InfStore {
     }
 
     // Given a partial match, return all the possible matches
-    public GetPossibleParitalMatches(partial:string):string[]{
+    public GetPossibleParitalMatches(partial: string): string[] {
         let match_iter = this.possibleInfPaths.values();
         let matches = [];
         for (const item of match_iter) {
-            if (item.startsWith(partial)){
+            if (item.startsWith(partial)) {
                 matches.push(item);
             }
         }
@@ -105,12 +105,12 @@ export class InfStore {
         const asyncCalls = [];
         for (const single_file of infFiles) {
             asyncCalls.push(this.ProcessInf(single_file));
-            let possiblePath = single_file.replace(path.sep,"/").substring(basePath.length).split("/");
-            //Add all possible paths to our set
             //Remove the basepath
-            while (possiblePath.length > 2){
+            let possiblePath = single_file.replace(path.sep, "/").substring(basePath.length + 1).split("/");
+            //Add all possible paths to our set
+            while (possiblePath.length > 2) {
                 this.possibleInfPaths.add(possiblePath.join("/"));
-                logger.info("Adding possible Path"+possiblePath.join("/"));
+                //logger.info("Adding possible Path"+possiblePath.join("/"));
                 possiblePath.shift();
             }
         }
@@ -208,7 +208,7 @@ export class DecStore {
         const data = await DecPaser.ParseDec(decpath);
         const decFileName = path.basename(decpath);
         const packageName = getPackageFromPath(decpath);
-        const packagePath = path.join(packageName,decFileName);
+        const packagePath = path.join(packageName, decFileName);
         // check to make sure it's a valid package name
         if (packageName) {
             if (!this.decs.has(packagePath)) this.decs.set(packagePath, []);
