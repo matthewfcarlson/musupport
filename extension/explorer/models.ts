@@ -54,20 +54,12 @@ export class PkgNode extends Node {
         let decItems: Node[] = []
         let dscItems: Node[] = [];
 
-        let exported_libraries = this.pkg.exportedLibraries;
+        let exported_libraries = this.pkg.exportedLibraryClasses;
         if (exported_libraries && exported_libraries.length > 0) {
             decItems.push(new PkgSectionNode(
                 "LibraryClasses",
                 exported_libraries.map((lib) =>
                     new LibraryClassNode(lib, lib.class, this.selectCommand))
-            ));
-        }
-        let exported_components = this.pkg.exportedComponents;
-        if (exported_components && exported_components.length > 0) {
-            decItems.push(new PkgSectionNode(
-                "Components",
-                exported_components.map((comp) =>
-                    new ComponentNode(comp, this.selectCommand))
             ));
         }
         let exported_pcds = this.pkg.exportedPcds;

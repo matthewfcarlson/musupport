@@ -5,7 +5,7 @@ import { promisifyExists, promisifyGlob, promisifyIsDir, delay, getPackageFromPa
 import { InfPaser } from "./parsers/inf_parser";
 import { DecPaser } from "./parsers/dec_parser";
 import { ExceptionHandler } from "winston";
-import { InfData, DecData, IDscData } from "./parsers/types";
+import { InfData, DecData, IDscData, IDscLibClass } from "./parsers/types";
 import { PathLike } from "fs";
 import { Library, Package } from "./parsers/models";
 import { DscPaser } from "./dsc/parser";
@@ -253,6 +253,10 @@ export class PackageStore {
         return this.packages;
     }
 
+    get searchPath(): Path[] {
+        return this.packages.map((p) => p.packageRoot);
+    }
+
     public async scanForPackages(libraryStore: LibraryStore) {
         logger.info("PACKAGE_STORE: Scanning workspace ")
 
@@ -294,7 +298,7 @@ export class LibraryStore {
     private libraries: Library[];
     private class_map: Map<string, Map<string, Library>>;
 
-    constructor(workspace: vscode.WorkspaceFolder) {
+    constructor(workspace: vscode.WorkspaceFolder, public readonly infStore: InfStore) {
         this.files = [];
         this.libraries = [];
         this.class_map = new Map<string, Map<string, Library>>();
@@ -357,6 +361,17 @@ export class LibraryStore {
                    return r;
                 }
             );
+    }
+
+    findLibraryByInfo(info: IDscLibClass) {
+        // TODO: Optimize - O(n^2) operation
+        for (let lib of this.libraries) {
+            // Search the global list of INF's for the provided info
+            if (lib.class == info.class && lib.filePath.endsWithPath(info.infPath)) {
+                return lib;
+            }
+        }
+        return null; // Not found!
     }
 
     public async scanForLibraries(infStore: InfStore) {

@@ -263,6 +263,7 @@ export class Path extends String {
   get basename(): string { return path.basename(this.toString()); }
   get dirname(): string { return path.dirname(this.toString()); }
   get parent(): Path { return new Path(path.dirname(this.toString())); }
+  get normalized(): string { return path.normalize(this.toString()); }
 
   toUri(): vscode.Uri {
     if (!this.isAbsolute) {
@@ -281,5 +282,12 @@ export class Path extends String {
     if (ext) { s = s.substr(0, s.length - ext.length); }
     s += newExt;
     return new Path(s);
+  }
+
+  startsWithPath(other: Path): boolean {
+    return this.normalized.startsWith(other.normalized.toString());
+  }
+  endsWithPath(other: Path): boolean {
+    return this.normalized.endsWith(other.normalized.toString());
   }
 }

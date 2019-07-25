@@ -20,19 +20,21 @@ export class Package {
     dec: DecData;
     dsc: IDscData;
     dscExtended: IDscDataExtended;
-    isProject: boolean;
-
-    // Libraries referenced by the DSC
-    libraries: LibraryStore;
 
     // DSC references
     referencedLibraries: Library[];
     referencedComponents: Component[];
 
     // DEC exports
-    exportedLibraries: Library[];
-    exportedComponents: Component[]; // Components are not usually exported
-
+    get exportedLibraryClasses(): Library[] {
+        if (this.dec) {
+            return this.dec.libraryClasses.map((lib) => {
+                if (lib.infPath) { lib.infPath = this.packageRoot.join(lib.infPath); }
+                return new Library(lib, this);
+            });
+        }
+        return null;
+    }
     get exportedGuids(): IDscGuid[] {
         return (this.dec) ? this.dec.guids : null;
     }
@@ -51,35 +53,10 @@ export class Package {
     get packageRoot(): Path { return (this.filePath) ? this.filePath.parent : null; }
 
     /**
-     * Returns a flattened list of components referenced in the DSC.
+     * A list of library classes consumed by the DSC, grouped by class name
      */
-    // get components(): Component[] { 
-    //     if (this.dec && this.dec.components) {
-    //         let items: Component[] = [];
-
-    //         // Iterate over each architecture
-    //         for (let [arch, components] of this.dec.components.entries()) {
-    //             for (let component of components) {
-    //                 // TODO: Will need to parse the INF component??
-    //                 let comp: IComponent = {
-    //                     infPath: new Path(component),
-    //                     archs: [], // TODO
-    //                     libraryClasses: null,
-    //                     source: null
-    //                 };
-    //                 items.push(new Component(comp, this, null)); // TODO: Name should come from INF
-    //             }
-    //         }
-    //         return items;
-    //     }
-    //     return null;
-    // }
-
     get libraryClassesGroupedByName(): Map<string, Library[]> {
         let map = new Map<string, Library[]>();
-        // for (let [name, items] of this.libraries.getLibrariesGroupedByName()) {
-        //     map.set(name, items);
-        // }
         for (let lib of this.referencedLibraries) {
             let entries = map.get(lib.class) || [];
             entries.push(lib);
@@ -88,25 +65,44 @@ export class Package {
         return map;
     }
 
-    async addLibrary(lib: Library) {
-        this.libraries.add(lib);
-    }
-
+    /**
+     * Scan for components & libraries referenced by the DSC
+     */
     async scanLibraries(libraryStore: LibraryStore) {
-        // let infs = await infStore.getInfsInPath(this.packageRoot);
-        // if (infs) {
-        //     for (let inf of infs) {
-        //         let lib = Library.fromInfData(inf, this);
-        //         if (lib) {
-        //             this.libraries.add(lib);
-        //         }
+
+        // let libraries = libraryStore.getLibrariesInPath(this.packageRoot);
+        // if (libraries) {
+        //     for (let lib of libraries) {
+        //         lib.package = this; // Update package owner
+        //         this.libraries.add(lib);
         //     }
         // }
-        let libraries = libraryStore.getLibrariesInPath(this.packageRoot);
-        if (libraries) {
-            for (let lib of libraries) {
-                lib.package = this; // Update package owner
-                this.libraries.add(lib);
+
+        // Lookup libraries defined in the DSC
+        if (this.dsc) {
+            if (this.dsc.libraries) {
+                for (let info of this.dsc.libraries) {
+                    let lib = libraryStore.findLibraryByInfo(info, this);
+                    if (lib) {
+                        // TODO: Is this the best way to figure out whether a library belongs to a DSC?
+                        if (lib.filePath.startsWithPath(this.packageRoot)) {
+                            lib.setOwnerPackage(this);
+                        }
+
+                        this.referencedLibraries.push(lib);
+                    }
+                    else {
+                        logger.warn(`Could not find library ${info.class}|${info.infPath} referenced by DSC ${this.dsc.filePath.basename}`);
+                    }
+                }
+            }
+
+            if (this.dsc.components) {
+                for (let info of this.dsc.components) {
+                    let comp = new Component(info, this);
+                    // TODO: Add to component store
+                    this.referencedComponents.push(comp);
+                }
             }
         }
     }
@@ -136,18 +132,18 @@ export class Package {
         return null;
     }
 
+    toString(): string {
+        return `${this.name}`;
+    }
+
     constructor(workspace: vscode.WorkspaceFolder, decData: DecData, dscData: IDscData = null, extendedData: IDscDataExtended = null) {
         this.workspace = workspace;
         this.dec = decData;
         this.dsc = dscData;
         this.dscExtended = extendedData;
-        this.libraries = new LibraryStore(this.workspace);
 
         this.referencedLibraries = [];
         this.referencedComponents = [];
-        this.exportedLibraries = [];
-        this.exportedComponents = [];
-        this.isProject = false;
 
         if (this.dec) {
             if (this.dec.defines) {
@@ -158,71 +154,16 @@ export class Package {
             if (!this.name && this.dec.infPath) {
                 this.name = this.dec.infPath.basename;
             }
-
-            if (this.dec.libraryClasses) {
-                for (let lib of this.dec.libraryClasses) {
-                    this.exportedLibraries.push(new Library(lib, this)); // TODO: Pull library from LibraryStore
-                }
-            }
-            if (this.dec.components) {
-                for (let comp of this.dec.components) {
-                    let data: IComponent = {
-                        archs: null,
-                        infPath: new Path(comp),
-                        libraryClasses: null,
-                        source: null
-                    };
-                    this.exportedComponents.push(new Component(data, this));
-                }
-            }
         }
 
         if (this.dsc) {
-            // TODO
-            // INF libraries built by the DSC
-            // for (let lib of pkg.libraryClasses) {
-            //     this.libraryClassStore.add(lib);
-            // }
             if (this.dsc.defines) {
                 let def = this.dsc.defines.get('PLATFORM_NAME');
                 if (def) {
-                    this.isProject = true;
                     this.name = def.trim();
                 }
             }
-
-            if (this.dsc.libraries) {
-                for (let lib of this.dsc.libraries) {
-                    this.referencedLibraries.push(new Library(lib, this)); // TODO: Pull library from LibraryStore
-                }
-            }
-
-            if (this.dsc.components) {
-                for (let comp of this.dsc.components) {
-                    this.referencedComponents.push(new Component(comp, this));
-                }
-            }
         }
-
-        // if (this.data) {
-        //     if (this.data.defines) {
-        //         let def = this.data.defines.get('PLATFORM_NAME');
-        //         if (def) { this.name = def.toString(); }
-
-        //         if (!this.name) {
-        //             let def = this.data.defines.get('PROJECT_NAME');
-        //             if (def) { this.name = def.toString(); }
-        //         }
-        //     }
-            
-        //     if (!this.name && this.data.filePath) {
-        //         this.name = path.basename(data.filePath.fsPath);
-        //     }
-            
-        //     if (!this.name) {
-        //         throw new Error(`Could not find name for DSC`);
-        //     }
-        // }
 
         if (!this.name) {
             throw new Error(`Could not find name for Package`);
@@ -308,6 +249,19 @@ export class Library {
 
             return new Library(comp, pkg);
         }
+    }
+
+    setOwnerPackage(pkg: Package) {
+        if (pkg) {
+            if (this.package && this.package != pkg) {
+                logger.warn(`Library ${this} is included in multiple DSCs (${this.package.name}, ${pkg.name})`);
+            }
+            this.package = pkg;
+        }
+    }
+
+    toString(): string {
+        return `${this.class||"NULL"}|${this.filePath}`;
     }
 
     constructor(data: IDscLibClass, pkg: Package = null) {

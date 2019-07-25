@@ -48,7 +48,7 @@ export class RepoScanner implements vscode.Disposable {
         
         this.projects           = new Set<ProjectDefinition>();
         this.infStore           = new InfStore(workspace);
-        this.libraryStore       = new LibraryStore(workspace);
+        this.libraryStore       = new LibraryStore(workspace, this.infStore);
         this.packageStore       = new PackageStore(workspace);
 
         this.packageStore.onPackageDiscovered((pkg) => { this.packageDiscovered(pkg); });

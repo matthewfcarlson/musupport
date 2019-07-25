@@ -76,7 +76,7 @@ export class InfPaser {
                     class: classname,
                     name: null,
                     archs: null,
-                    infPath: infPath.join(new Path(path)),
+                    infPath: new Path(path), // relative path
                     source: null
                 };
                 items.push(item);
