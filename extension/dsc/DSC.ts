@@ -3,20 +3,53 @@ import { logger } from '../logger';
 import { delay } from '../utilities';
 import { InfStore } from '../cpp/data_store';
 import { DscParser } from './parser';
+import { createReadStream } from 'fs';
 
 let diagnosticCollection: vscode.DiagnosticCollection;
+let workspace: vscode.WorkspaceFolder;
 
-export function activate(ctx: vscode.ExtensionContext): void {
+function DscOnCreate(event: vscode.Uri): any {
+  logger.info("File was created");
+  logger.info(event.toString())
+  //TODO: remove all the entries from the diagnostic collection
+  let parsing = DscParser.ParseFull(event, workspace.uri);
+  //TODO: add errors from parsing to Diagnostics
+}
+
+async function DscOnEdit(event: vscode.Uri): Promise<any> {
+  logger.info("File was edited");
+  //TODO: remove all the entries from the diagnostic collection
+  logger.info(event.toString())
+  let parsing = await DscParser.ParseFull(event, workspace.uri);
+  logger.info("Parsing:", parsing);
+  //TODO: add errors from parsing to Diagnostics
+}
+
+function DscOnDelete(event: vscode.Uri): any {
+  logger.info("File was deleted");
+  logger.info(event.toString())
+  //TODO: remove all the entries from the diagnostic collection
+}
+
+export function activate(ctx: vscode.ExtensionContext, ws:vscode.WorkspaceFolder): void {
 
   let documentSelector =  { language: 'dsc' };
   let completionProvider = vscode.languages.registerCompletionItemProvider(
-    documentSelector, new DscCompletionItemProvider(), '.', '\"', "[", "|")
+    documentSelector, new DscCompletionItemProvider(), '.', '\"', "[", "|");
   
+  workspace = ws;
   diagnosticCollection = vscode.languages.createDiagnosticCollection('dsc');
   ctx.subscriptions.push(diagnosticCollection);
   ctx.subscriptions.push(completionProvider);
 
+  let dsc_watcher = vscode.workspace.createFileSystemWatcher("**/*.dsc");
+  ctx.subscriptions.push(dsc_watcher);
+  dsc_watcher.onDidCreate(DscOnCreate);
+  dsc_watcher.onDidChange(DscOnEdit);
+  dsc_watcher.onDidDelete(DscOnDelete);
   logger.info('Registering diagnostic collection');
+
+  //TODO find all the 
 }
 
 class DscCompletionItemProvider implements vscode.CompletionItemProvider {
