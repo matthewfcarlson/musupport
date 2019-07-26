@@ -89,7 +89,7 @@ export class RepoScanner implements vscode.Disposable {
         // Look for project packages as the workspace is scanning for DEC/DSCs
         const config = vscode.workspace.getConfiguration(null, null);
         const platformDsc: string = config.get('musupport.platformDsc');
-        if (platformDsc && (pkg.fileName == platformDsc)) {
+        if (platformDsc && pkg.dscFilePath && (pkg.dscFilePath.basename == platformDsc)) {
             await this.discoveredProject(pkg);
         }
     }
