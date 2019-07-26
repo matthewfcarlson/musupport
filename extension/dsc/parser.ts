@@ -1,5 +1,5 @@
 import { IDscData, IDscDataExtended, IDscDefines, IDscPcd, ISourceInfo, IDscError, DscSections, DscPcdType } from '../parsers/types';
-import { promisifyReadFile, stringTrim } from '../utilities';
+import { promisifyReadFile, stringTrim, isNumeric } from '../utilities';
 import { logger } from "../logger";
 import * as path from 'path';
 import { Uri } from 'vscode';
@@ -43,9 +43,11 @@ export class DscParser {
   public static GetPossibleSections(): string[] {
     var validSections: string[] = [];
     for(var n in DscSections) {
+      if (isNumeric(n)) continue;
       validSections.push(n);
     }
     for(var n in DscPcdType) {
+      if (isNumeric(n)) continue;
       validSections.push("Pcd"+n);
     }
     return validSections;
@@ -85,14 +87,14 @@ export class DscParser {
         };
         return line_data;
       });
-      logger.info("linearray", lineArray);
+      //logger.info("linearray", lineArray);
 
       //remove lines that are whitespace
       lineArray = lineArray.filter( (line) => {
         if (line.line.length == 0) return false;
         return true;
       });
-      logger.info("linearray filtered", lineArray);
+      //logger.info("linearray filtered", lineArray);
 
       return lineArray;
 
@@ -216,11 +218,16 @@ export class DscParser {
         }
         else if (currentSection.type == null){
           data.errors.push(this.MakeError("This line doesn't coorespond to a good section", currentLine.line, currentParsing.source, true));
+          logger.warn("Unknown section"+currentLine.line);
         }
         else if (currentSection.type == DscSections.LibraryClasses) {
           //parse the library classes?
+          logger.info("Parsing section "+currentSection.type);
         }
-      }
+        
+      } // end of lines == 0
+      //lines should be zero
+      parseStack.shift(); // shift off the parse stack
     }
     return data;
   }

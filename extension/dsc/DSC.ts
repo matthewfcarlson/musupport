@@ -22,6 +22,7 @@ async function DscOnEdit(event: vscode.Uri): Promise<any> {
   logger.info(event.toString())
   let parsing = await DscParser.ParseFull(event, workspace.uri);
   logger.info("Parsing:", parsing);
+  logger.info("Errors:", parsing.errors);
   //TODO: add errors from parsing to Diagnostics
 }
 
