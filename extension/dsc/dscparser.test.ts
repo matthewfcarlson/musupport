@@ -1,4 +1,4 @@
-import { DscPaser } from "./parser";
+import { DscParser } from "./parser";
 import { promisifyWriteFile } from "../utilities";
 import * as mocha from 'mocha';
 import * as chai from 'chai';
@@ -501,7 +501,7 @@ describe('My math library', () => {
   it('should be able to parse the file', async (done) => {
 
     await promisifyWriteFile(filePath, dscFile);
-    let result = await DscPaser.ParseFull(filePath, rootPath);
+    let result = await DscParser.ParseFull(filePath, rootPath);
     console.log(result.toDscData());
     console.log(result);
     done();    

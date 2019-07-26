@@ -8,8 +8,11 @@ import { ExceptionHandler } from "winston";
 import { InfData, DecData, IDscData, IDscLibClass } from "./parsers/types";
 import { PathLike } from "fs";
 import { Library, Package } from "./parsers/models";
-import { DscPaser } from "./dsc/parser";
+import { DscParser } from "./dsc/parser";
 import * as utils from './utilities';
+
+//TODO make this a map or an array to handle multiple workspaces
+let _SharedInfStore: InfStore;
 
 /**
  * This class stores the relationship between a given file and the inf
@@ -18,6 +21,7 @@ export class InfStore {
     private workspace: vscode.WorkspaceFolder;
     
     private infs: Map<string, InfData>;
+    private possibleInfPaths: Set<string>;
     //this keeps track of an inf(value) for the source file (key)
     private infsForSource: Map<string, InfData[]>;
     //need some way to keep track of file => inf's
@@ -30,8 +34,17 @@ export class InfStore {
         this.infFiles = [];
         this.infs = new Map();
         this.infsForSource = new Map();
+        this.possibleInfPaths = new Set();
         this.workspace = workspace;
-        this.clear();
+        this.Clear();
+    }
+
+    public static GetStore(): InfStore {
+        return _SharedInfStore;
+    }
+    public static SetupStore(ws: vscode.WorkspaceFolder): InfStore {
+        _SharedInfStore = new InfStore(ws);
+        return _SharedInfStore;
     }
 
     public HasInfForFile(uri: vscode.Uri): boolean {
@@ -52,7 +65,7 @@ export class InfStore {
      * Clears the relationship for a given URI
      * @param uri if not specified, clear all relationships
      */
-    public clear(uri?: vscode.Uri) {
+    public Clear(uri?: vscode.Uri) {
         logger.info("INF_STORE Clearing data");
         if (uri) {
             logger.error("INF_STORE clearing for specific URI is not supported")
@@ -61,6 +74,7 @@ export class InfStore {
             this.infFiles = [];
             this.infs.clear();
             this.infsForSource.clear();
+            this.possibleInfPaths.clear();
         }
     }
 
@@ -72,6 +86,10 @@ export class InfStore {
     //         waitTimer *= 1.4; //increase the wait timer each time
     //     }
     // }
+
+    public GetPossibleParitalMatches(partial:string):string[]{
+        return [];
+    }
 
     // public async Scan(uri?: vscode.Uri) {
     //     if (this.scanInProgress) await this.WaitForScanToFinish();
@@ -143,7 +161,7 @@ export class DecStore {
     constructor(workspace: vscode.WorkspaceFolder) {
         this.workspace = workspace;
         this.decs = new Map();
-        this.clear();
+        this.Clear();
     }
 
     /**
@@ -161,7 +179,7 @@ export class DecStore {
     * Clears the relationship for a given URI
     * @param uri if not specified, clear all relationships
     */
-    public clear(uri?: string) {
+    public Clear(uri?: string) {
         if (uri) {
             logger.error("DEC_STORE clearing for specific URI is not supported")
         }
@@ -179,7 +197,7 @@ export class DecStore {
         }
     }
 
-    public async scan(uri?: vscode.Uri) {
+    public async Scan(uri?: vscode.Uri) {
         if (this.scanInProgress) await this.WaitForScanToFinish();
         this.scanInProgress = true;
         //TODO make sure that the uri isn't a file (make sure it is a directory)

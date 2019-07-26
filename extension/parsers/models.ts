@@ -6,7 +6,7 @@ import { Path } from '../utilities';
 import { InfPaser } from './inf_parser';
 import { logger } from '../logger';
 import { LibraryStore, InfStore } from '../data_store';
-import { DscPaser } from '../dsc/parser';
+import { DscParser } from '../dsc/parser';
 import { DecPaser } from './dec_parser';
 
 /***
@@ -82,7 +82,7 @@ export class Package {
         if (this.dsc) {
             if (this.dsc.libraries) {
                 for (let info of this.dsc.libraries) {
-                    let lib = libraryStore.findLibraryByInfo(info, this);
+                    let lib = libraryStore.findLibraryByInfo(info);
                     if (lib) {
                         // TODO: Is this the best way to figure out whether a library belongs to a DSC?
                         if (lib.filePath.startsWithPath(this.packageRoot)) {
@@ -116,7 +116,7 @@ export class Package {
             let dscFile = decFile.replaceExtension('.dsc');
             if (await utils.promisifyExists(dscFile.toString())) {
                 if (dscFile) {
-                    dsc = await DscPaser.Parse(dscFile, workspace.uri);
+                    dsc = await DscParser.Parse(dscFile, workspace.uri);
                 }
             }
             if (dsc) {

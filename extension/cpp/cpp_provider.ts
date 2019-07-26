@@ -234,39 +234,46 @@ export class CppProvider implements CustomConfigurationProvider {
 
 
 
-function createCommands(context: vscode.ExtensionContext, configLoaders: CppProvider[]) {
-  context.subscriptions.push(vscode.commands.registerCommand('musupport.selectPackage', async () => {
-    const workspaces = vscode.workspace.workspaceFolders;
+async function createCommands(context: vscode.ExtensionContext, configLoaders: CppProvider[]) {
+  let current_commands = await vscode.commands.getCommands(true)
+  const selectPackageCmd = 'musupport.selectPackage';
+  if (current_commands.indexOf(selectPackageCmd) != -1) {
+    context.subscriptions.push(vscode.commands.registerCommand(selectPackageCmd, async () => {
+      const workspaces = vscode.workspace.workspaceFolders;
 
-    if (workspaces === undefined) {
-      return;
-    }
+      if (workspaces === undefined) {
+        return;
+      }
 
-    for (const wp of workspaces) {
-      for (const loader of configLoaders) {
-        if (wp.uri.fsPath === loader.workspace.uri.fsPath) {
-          await loader.selectPackage();
+      for (const wp of workspaces) {
+        for (const loader of configLoaders) {
+          if (wp.uri.fsPath === loader.workspace.uri.fsPath) {
+            await loader.selectPackage();
+          }
         }
       }
-    }
-  }));
+    }));
+  }
 
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
-  context.subscriptions.push(vscode.commands.registerCommand('musupport.refreshPackages', async () => {
-    const workspaces = vscode.workspace.workspaceFolders;
+  const refreshPackageCmd = 'musupport.refreshPackages';
+  if (current_commands.indexOf(refreshPackageCmd) != -1) {
+    context.subscriptions.push(vscode.commands.registerCommand(refreshPackageCmd, async () => {
+      const workspaces = vscode.workspace.workspaceFolders;
 
-    if (workspaces === undefined) {
-      return;
-    }
+      if (workspaces === undefined) {
+        return;
+      }
 
-    for (const wp of workspaces) {
-      for (const loader of configLoaders) {
-        if (wp.uri.fsPath === loader.workspace.uri.fsPath) {
-          await loader.Refresh();
+      for (const wp of workspaces) {
+        for (const loader of configLoaders) {
+          if (wp.uri.fsPath === loader.workspace.uri.fsPath) {
+            await loader.Refresh();
+          }
         }
       }
-    }
-  }));
+    }));
+  }
 }

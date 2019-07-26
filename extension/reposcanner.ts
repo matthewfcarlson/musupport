@@ -6,7 +6,7 @@ import { ProjectDefinition, ProjectManager } from './projectmanager';
 import { stringify } from 'querystring';
 import { logger } from './logger';
 import { InfData, DecData, IDscDataExtended, IDscData, IComponent, DscArch, ISourceInfo, IDscLibClass } from "./parsers/types";
-import { DscPaser } from './dsc/parser';
+import { DscParser } from './dsc/parser';
 import { Package, Library } from './parsers/models';
 import { Path } from './utilities';
 import { PackageStore, LibraryStore, InfStore } from './data_store';
@@ -61,7 +61,7 @@ export class RepoScanner implements vscode.Disposable {
     }
 
     private clear() {
-        this.infStore.clear();
+        this.infStore.Clear();
         this.projects.clear();
         this.packageStore.clear();
         this.libraryStore.clear();

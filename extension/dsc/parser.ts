@@ -15,9 +15,9 @@ class DscData {
 }
 
 interface DscLine {
-  line: String,
-  lineNo: Number,
-  columnOffset: Number
+  line: string,
+  lineNo: number,
+  columnOffset: number
 }
 
 interface IParseStack {
@@ -28,20 +28,31 @@ interface IParseStack {
 // A section that we want to parse like Define or 
 interface IParseSection {
   type: DscSections|DscPcdType;
-  kind: String[]; //common, x64, common.PEIM
+  kind: string[]; //common, x64, common.PEIM
 }
 
-export class DscPaser {
+export class DscParser {
 
-  private static FindDefine(name:String): IDscDefines[]{
+  private static FindDefine(name:string): IDscDefines[]{
     return [];
   }
-  private static FindPcd(name:String): IDscPcd[]{
+  private static FindPcd(name:string): IDscPcd[]{
     return [];
   }
 
   private static ToDscData(): IDscData {
     return null;
+  }
+
+  public static GetPossibleSections(): string[] {
+    var validSections: string[] = [];
+    for(var n in DscSections) {
+      validSections.push(n);
+    }
+    for(var n in DscPcdType) {
+      validSections.push("Pcd"+n);
+    }
+    return validSections;
   }
 
   // This get the lines from a DSC
@@ -95,7 +106,7 @@ export class DscPaser {
     }
   }
 
-  private static MakeError(msg:String, line:String, source:ISourceInfo, isFatal:Boolean=false): IDscError {
+  private static MakeError(msg:string, line:string, source:ISourceInfo, isFatal:Boolean=false): IDscError {
 
     var result: IDscError = {
       source: source,
@@ -109,17 +120,15 @@ export class DscPaser {
     return result;
   }
 
-  
-
   public static async ParseFull(dscpath: Uri|PathLike, workspacePath: Uri|PathLike): Promise<IDscDataExtended> {
     var data: IDscDataExtended = {
       filePath: Uri.parse(dscpath.toString()),
       defines: [],
-      findDefine: DscPaser.FindDefine, //search for a define by name
+      findDefine: DscParser.FindDefine, //search for a define by name
       libraries: [],
       pcds: [],
-      findPcd: DscPaser.FindPcd,
-      toDscData: DscPaser.ToDscData, //returns the DSC data in a simpler format
+      findPcd: DscParser.FindPcd,
+      toDscData: DscParser.ToDscData, //returns the DSC data in a simpler format
       errors: []
     };
 
@@ -134,22 +143,16 @@ export class DscPaser {
       lines: null
     });
 
-    var validSections: string[] = [];
+    var validSections = DscParser.GetPossibleSections();
     var currentSection:IParseSection;
     currentSection.type = null;
-    for(var n in DscSections) {
-      validSections.push(n);
-    }
-    for(var n in DscPcdType) {
-      validSections.push("Pcd"+n);
-    }
     logger.info("Valid Sections:"+validSections);
 
     //first we need to open the file
     while (parseStack.length != 0){
       var currentParsing = parseStack[0];
       if (currentParsing.lines == null) {
-        currentParsing.lines = await DscPaser.GetCleanLinesFromUri(currentParsing.source.uri);
+        currentParsing.lines = await DscParser.GetCleanLinesFromUri(currentParsing.source.uri);
         if (currentParsing.lines == null) { // if we can't open the file, create an error of the particular
           parseStack.shift();
           currentParsing = parseStack[0];

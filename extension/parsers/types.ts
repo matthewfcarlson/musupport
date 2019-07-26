@@ -34,19 +34,19 @@ export interface IDscData {
   libraries: IDscLibClass[];
   components: IComponent[];
   pcds: IDscPcd[];
-  //libraries: Map<String, Map<String, String>>; // arch -> library name -> library inf path
-  //libraries: Map<String, [String, String][]>; // arch -> list of [library name, library inf path]
-  //components: Map<String, String[]>; // arch -> component inf paths
-  //pcds: Map<String, Map<String, String>>; // type of PCD -> name -> value
+  //libraries: Map<string, Map<string, string>>; // arch -> library name -> library inf path
+  //libraries: Map<string, [string, string][]>; // arch -> list of [library name, library inf path]
+  //components: Map<string, string[]>; // arch -> component inf paths
+  //pcds: Map<string, Map<string, string>>; // type of PCD -> name -> value
 }
 
 export interface IDscDataExtended {
   filePath: Uri;
   defines: IDscDefines[],
-  findDefine: (String)=>IDscDefines[]; //search for a define by name
+  findDefine: (string)=>IDscDefines[]; //search for a define by name
   libraries: IDscLibClass[],
   pcds: IDscPcd[],
-  findPcd: (String)=>IDscPcd[];
+  findPcd: (string)=>IDscPcd[];
   toDscData: ()=>IDscData; //returns the DSC data in a simpler format
   errors: IDscError[]
 }
@@ -60,9 +60,9 @@ export interface ISourceInfo {
 
 export interface IDscDefines {
   source: ISourceInfo;
-  key:String;
-  value:String;
-  toString: ()=>String // a function that returns a string
+  key:string;
+  value:string;
+  toString: ()=>string // a function that returns a string
 }
 
 export interface IDscError{
@@ -70,7 +70,7 @@ export interface IDscError{
   text: String;
   error_msg: String;
   isFatal: Boolean;
-  toString: ()=>String // a function that returns a string
+  toString: ()=>string // a function that returns a string
 }
 
 export enum DscPcdType {
@@ -110,17 +110,17 @@ export enum DscSections {
 
 export interface IDscPcd {
   source: ISourceInfo;
-  tokenspace: String;
-  tokenname: String;
+  tokenspace: string;
+  tokenname: string;
   type:DscPcdType; //the type of PCD
   archs: DscArch[];
   id?:Number;
-  variableGuid?:String;
-  toString: ()=>String // a function that returns a string
+  variableGuid?:string;
+  toString: ()=>string // a function that returns a string
 }
 //the conditional
 export interface IDscConditional {
-  conditions: String[]; //a list of all the conditionals that took us to this point
+  conditions: string[]; //a list of all the conditionals that took us to this point
   eval: Boolean; //the result of the evaluation
 }
 
@@ -129,16 +129,16 @@ export interface IComponent {
   infPath: Path;
   archs: DscArch[];
   libraryClasses?:IDscLibClass[];
-  toString: ()=>String; // a function that returns a string
+  toString: ()=>string; // a function that returns a string
 }
 
 export interface IDscLibClass {
   source: ISourceInfo;
   infPath: Path;
   archs: DscArch[];
-  name: String;
+  name: string;
   class: String;
-  toString: ()=>String; // a function that returns a string
+  toString: ()=>string; // a function that returns a string
   //BuildOptions: DscBuildOption[];
 }
 
