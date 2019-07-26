@@ -1,35 +1,50 @@
 import { Uri } from "vscode";
+import { Path } from "../utilities";
 
 export interface InfData {
+  includes: string[];
   sources: string[];
   packages: string[];
   pcds: string[];
-  guids: string[]; // protocols and guids
-  infPath: string;
+  guids: IDscGuid[];
+  protocols: IDscGuid[];
+  infPath: Path;
   defines: Map<string, string>;
   components: string[];
-  libraryClasses: string[];
+  libraryClasses: IDscLibClass[];
 }
+
+// DECs are a subset of INFs
 export interface DecData {
   includes: string[];
-  decPath: string;
+  infPath: Path;
+  defines: Map<string, string>;
+  components: string[];
+  libraryClasses: IDscLibClass[];
+  guids: IDscGuid[];
+  protocols: IDscGuid[];
+  pcds: string[];
 }
 
 // a reduced, simplified version of all the DSC data - all conditionals are evaluated removed so everything applies
 // in case of conflicts, first evaluated is taken
 export interface IDscData {
-  filePath: Uri;
-  defines: Map<string,string>;
-  libraries: Map<string, Map<string, string>>; // arch -> library name -> library inf uri
-  components: Map<string, string[]>; // arch -> component inf uris
-  pcds: Map<string, Map<string, string>>; // type of PCD -> name -> value
+  filePath: Path;
+  defines: Map<string, string>;
+  libraries: IDscLibClass[];
+  components: IComponent[];
+  pcds: IDscPcd[];
+  //libraries: Map<string, Map<string, string>>; // arch -> library name -> library inf path
+  //libraries: Map<string, [string, string][]>; // arch -> list of [library name, library inf path]
+  //components: Map<string, string[]>; // arch -> component inf paths
+  //pcds: Map<string, Map<string, string>>; // type of PCD -> name -> value
 }
 
 export interface IDscDataExtended {
   filePath: Uri;
   defines: IDscDefines[],
   findDefine: (string)=>IDscDefines[]; //search for a define by name
-  libraries: DscLibClass[],
+  libraries: IDscLibClass[],
   pcds: IDscPcd[],
   findPcd: (string)=>IDscPcd[];
   toDscData: ()=>IDscData; //returns the DSC data in a simpler format
@@ -109,19 +124,25 @@ export interface IDscConditional {
   eval: Boolean; //the result of the evaluation
 }
 
-export interface IDscComponent {
+export interface IComponent {
   source: ISourceInfo;
-  infPath: string;
+  infPath: Path;
   archs: DscArch[];
-  libraryClasses?:DscLibClass[];
+  libraryClasses?:IDscLibClass[];
   toString: ()=>string; // a function that returns a string
 }
 
-export interface DscLibClass {
+export interface IDscLibClass {
   source: ISourceInfo;
-  infPath: string;
+  infPath: Path;
   archs: DscArch[];
   name: string;
-  toString: ()=>String; // a function that returns a string
+  class: String;
+  toString: ()=>string; // a function that returns a string
   //BuildOptions: DscBuildOption[];
+}
+
+export interface IDscGuid {
+  name: string;
+  guid: string;
 }

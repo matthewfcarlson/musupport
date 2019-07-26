@@ -102,7 +102,7 @@
                 },
                 "musupport.platformDsc": {
                     "type": "string",
-                    "default": "PlatformPkg.dsc",
+                    "default": "PlatformPkg",
                     "description": "A glob to use to locate the platform build DSC for any projects in the workspace",
                     "scope": "resource"
                 },
