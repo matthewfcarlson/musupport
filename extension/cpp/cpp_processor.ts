@@ -4,8 +4,7 @@ import { logger } from '../logger';
 import { containsMuProjects, promisifyReadDir, promisifyExists, promisifyGlob, promisifyIsDir, promisifyReadFile } from '../utilities';
 
 import * as makefile_parser from '../parsers/makefile_parser';
-//import { match } from 'minimatch';
-import { InfStore, DecStore } from './data_store';
+import { InfStore, DecStore } from '../data_store';
 import { CCppProperties } from "./cpp_properties";
 import { SourceFileConfigurationItem, SourceFileConfiguration } from 'vscode-cpptools';
 // When long running- use this progress Sample
@@ -126,7 +125,7 @@ export class CppProcessor {
     public async RefreshWorkspace() {
         //refresh the inf's
         await this.decStore.Scan();
-        await this.infStore.Scan();
+        await this.infStore.scan();
 
     }
 

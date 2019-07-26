@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { logger } from '../logger';
 import { delay } from '../utilities';
-import { InfStore } from '../cpp/data_store';
+import { InfStore } from '../data_store';
 import { DscParser } from './parser';
 import { createReadStream } from 'fs';
 
