@@ -78,7 +78,12 @@ export function promisifyReadFile(filename: string): Promise<string> {
 export function stringTrim(string: string) {
   return string.replace(/^\s+|\s+$/g, '');
 };
-
+export function stringTrimLeft(string: string) {
+  return string.replace(/^\s+/g, '');
+};
+export function stringTrimRight(string: string) {
+  return string.replace(/\s+$/g, '');
+};
 export function getPackageFromPath(uriSubPath: string): string | null {
   let pathFragments = path.normalize(uriSubPath).split(path.sep) // should be the file seperator of our system
   let packageName = "";
@@ -126,6 +131,11 @@ export function promisifyGlob(pattern: vscode.GlobPattern, options?: glob.IOptio
       else resolve(data);
     });
   });
+}
+
+export function isNumeric(value: string | number): boolean
+{
+   return ((value != null) && !isNaN(Number(value.toString())));
 }
 
 
@@ -251,4 +261,38 @@ export function showWarning(message: string) {
 export function showError(message: string) {
   logger.error(message);
   return vscode.window.showInformationMessage('MU: ' + message);
+}
+
+export class Path extends String {
+  get isAbsolute(): boolean { return path.isAbsolute(this.toString()); }
+  get basename(): string { return path.basename(this.toString()); }
+  get dirname(): string { return path.dirname(this.toString()); }
+  get parent(): Path { return new Path(path.dirname(this.toString())); }
+  get normalized(): string { return path.normalize(this.toString()); }
+
+  toUri(): vscode.Uri {
+    if (!this.isAbsolute) {
+      throw new Error(`Path '${this} cannot be converted to URI - path is not absolute`);
+    }
+    return vscode.Uri.file(this.toString());
+  }
+
+  join(other: Path): Path {
+    return new Path(path.join(this.toString(), other.toString()));
+  }
+
+  replaceExtension(newExt: string) {
+    let s = this.toString();
+    let ext = path.extname(s);
+    if (ext) { s = s.substr(0, s.length - ext.length); }
+    s += newExt;
+    return new Path(s);
+  }
+
+  startsWithPath(other: Path): boolean {
+    return this.normalized.startsWith(other.normalized.toString());
+  }
+  endsWithPath(other: Path): boolean {
+    return this.normalized.endsWith(other.normalized.toString());
+  }
 }
