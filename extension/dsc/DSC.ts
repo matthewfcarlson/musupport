@@ -42,8 +42,9 @@ async function DscOnEdit(event: vscode.Uri): Promise<any> {
       severity: severity,
       message: error.error_msg,
       range: range,
-      code: error.code_text
+      code: error.code_text,
     };
+    //TODO use error.source.uri to add to the list of sources
     newErrors.push(newError);
     logger.warn(error.toString());
   }

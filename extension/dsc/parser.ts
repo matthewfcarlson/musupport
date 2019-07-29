@@ -196,7 +196,6 @@ export class DscParser {
             return x.split(".");
           });
           let sectionType = sectionTypeLists[0][0];
-          logger.info("Parsing section of type "+sectionType + " at " + currentParsing.source.lineno);
           
           for (var i = 0; i < sectionTypeLists.length; i++){
             let currentSectionType = sectionTypeLists[i].shift();
@@ -217,8 +216,7 @@ export class DscParser {
           });
           
           var sectionTypeEnum:DscPcdType|DscSections = sectionType.startsWith("Pcds")?DscPcdType[sectionType.substr(4)]:DscSections[sectionType];
-          logger.info("Switching to section "+sectionTypeEnum + ":" + sectionType)
-
+          
           if (sectionTypeEnum == undefined) {
             data.errors.push(this.MakeError("Section type is not a valid section", sectionType, currentLine.line, currentParsing.source, true));
             currentSection.type = null;
