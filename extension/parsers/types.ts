@@ -53,9 +53,9 @@ export interface IDscDataExtended {
 
 export interface ISourceInfo {
   uri: Uri;
-  lineno: Number;
+  lineno: number;
   conditional?: IDscConditional;
-  column: Number; //if we don't have a column or don't know, it's 0
+  column: number; //if we don't have a column or don't know, it's 0
 }
 
 export interface IDscDefines {
@@ -67,8 +67,8 @@ export interface IDscDefines {
 
 export interface IDscError{
   source: ISourceInfo;
-  text: String;
-  error_msg: String;
+  code_text: string;
+  error_msg: string;
   isFatal: Boolean;
   toString: ()=>string // a function that returns a string
 }
@@ -114,7 +114,7 @@ export interface IDscPcd {
   tokenname: string;
   type:DscPcdType; //the type of PCD
   archs: DscArch[];
-  id?:Number;
+  id?:number;
   variableGuid?:string;
   toString: ()=>string // a function that returns a string
 }
@@ -137,7 +137,7 @@ export interface IDscLibClass {
   infPath: Path;
   archs: DscArch[];
   name: string;
-  class: String;
+  class: string;
   toString: ()=>string; // a function that returns a string
   //BuildOptions: DscBuildOption[];
 }

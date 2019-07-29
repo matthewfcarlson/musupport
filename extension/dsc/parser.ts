@@ -48,7 +48,7 @@ export class DscParser {
     }
     for(var n in DscPcdType) {
       if (isNumeric(n)) continue;
-      validSections.push("Pcd"+n);
+      validSections.push("Pcds"+n);
     }
     return validSections;
   }
@@ -87,15 +87,11 @@ export class DscParser {
         };
         return line_data;
       });
-      //logger.info("linearray", lineArray);
-
       //remove lines that are whitespace
       lineArray = lineArray.filter( (line) => {
         if (line.line.length == 0) return false;
         return true;
       });
-      //logger.info("linearray filtered", lineArray);
-
       return lineArray;
 
     }
@@ -104,11 +100,23 @@ export class DscParser {
     }
   }
 
-  private static MakeError(msg:string, line:string, source:ISourceInfo, isFatal:Boolean=false): IDscError {
-
+  private static MakeError(msg:string, error_line:string, code_line:string, code_source:ISourceInfo, isFatal:Boolean=false): IDscError {
+    let column = code_source.column;
+    if (column == 0){ // if we have a zero column, figure out where the error_line occurs in code_line
+      column = code_line.indexOf(error_line); 
+    }
+    if (column < 0) {
+      column = 0;
+    } 
+    const source:ISourceInfo = {
+      uri: code_source.uri,
+      lineno: code_source.lineno,
+      conditional: code_source.conditional,
+      column: column
+    }
     var result: IDscError = {
       source: source,
-      text:line,
+      code_text:code_line,
       error_msg: msg,
       isFatal: isFatal,
       toString: () => {
@@ -119,7 +127,7 @@ export class DscParser {
   }
 
   public static async ParseFull(dscpath: Uri|PathLike, workspacePath: Uri|PathLike): Promise<IDscDataExtended> {
-    var data: IDscDataExtended = {
+    let data: IDscDataExtended = {
       filePath: Uri.parse(dscpath.toString()),
       defines: [],
       findDefine: DscParser.FindDefine, //search for a define by name
@@ -130,8 +138,7 @@ export class DscParser {
       errors: []
     };
 
-    var sources: ISourceInfo;
-    var parseStack: IParseStack[] = [];
+    let parseStack: IParseStack[] = [];
     parseStack.push( {
       source : {
         uri: Uri.parse(dscpath.toString()),
@@ -141,8 +148,8 @@ export class DscParser {
       lines: null
     });
 
-    var validSections = DscParser.GetPossibleSections();
-    var currentSection:IParseSection = {
+    let validSections = DscParser.GetPossibleSections();
+    let currentSection:IParseSection = {
       type: null,
       kind: null
     };
@@ -156,7 +163,7 @@ export class DscParser {
         if (currentParsing.lines == null) { // if we can't open the file, create an error of the particular
           parseStack.shift();
           logger.info("We weren't able to open the file");
-          data.errors.push(this.MakeError("Unable to open file", "", currentParsing.source, true));
+          data.errors.push(this.MakeError("Unable to open file", "", "", currentParsing.source, true));
           continue;
         }
       }
@@ -184,7 +191,7 @@ export class DscParser {
         
         else if (currentLine.line.startsWith("[") && currentLine.line.endsWith("]")) { //if we're on a new section
           //handle the new section
-          let sectionTypes = currentLine.line.split(",").map(stringTrim); //get a list of the sections in the brackets
+          let sectionTypes = currentLine.line.replace("[","").replace("]","").split(",").map(stringTrim); //get a list of the sections in the brackets
           let sectionTypeLists = sectionTypes.map((x)=> {
             return x.split(".");
           });
@@ -195,11 +202,11 @@ export class DscParser {
             let currentSectionType = sectionTypeLists[i].shift();
             if (currentSectionType != sectionType) { //make sure all the sections match
               //we're going to keep parsing and assume we're correct in the future?
-              data.errors.push(this.MakeError("Section type does not match rest of section", currentSectionType, currentParsing.source, false));
+              data.errors.push(this.MakeError("Section type does not match rest of section", currentSectionType, currentLine.line, currentParsing.source, false));
             }
             //TODO validate each of the types to make sure it's valid
             if (validSections.indexOf(currentSectionType) == -1){
-              data.errors.push(this.MakeError("Section type is not a valid section", currentSectionType, currentParsing.source, true));
+              data.errors.push(this.MakeError("Section type is not a valid section", currentSectionType, currentLine.line, currentParsing.source, true));
             }
           }
           
@@ -209,20 +216,28 @@ export class DscParser {
             sectionTypeDescriptors.push(type);
           });
           
-          var sectionTypeEnum:DscPcdType|DscSections = sectionType.startsWith("Pcd")?DscPcdType[sectionType.substr(3)]:DscSections[sectionType];
-          
-          currentSection = {
-            type: sectionTypeEnum,
-            kind: sectionTypeDescriptors
+          var sectionTypeEnum:DscPcdType|DscSections = sectionType.startsWith("Pcds")?DscPcdType[sectionType.substr(4)]:DscSections[sectionType];
+          logger.info("Switching to section "+sectionTypeEnum + ":" + sectionType)
+
+          if (sectionTypeEnum == undefined) {
+            data.errors.push(this.MakeError("Section type is not a valid section", sectionType, currentLine.line, currentParsing.source, true));
+            currentSection.type = null;
+            continue;
           }
+          
+          currentSection.type = sectionTypeEnum;
+          currentSection.kind = sectionTypeDescriptors;
         }
         else if (currentSection.type == null){
-          data.errors.push(this.MakeError("This line doesn't coorespond to a good section", currentLine.line, currentParsing.source, true));
-          logger.warn("Unknown section"+currentLine.line);
+          data.errors.push(this.MakeError("This line doesn't coorespond to a good section", currentLine.line, currentLine.line, currentParsing.source, true));
+          logger.warn("Unknown section: "+currentLine.line);
         }
         else if (currentSection.type == DscSections.LibraryClasses) {
           //parse the library classes?
           logger.info("Parsing section "+currentSection.type);
+        }
+        else {
+          //We don't know what to do with this line
         }
         
       } // end of lines == 0
