@@ -95,15 +95,6 @@ export class CppProvider implements CustomConfigurationProvider {
     this.cppToolsApi = cppToolsApi;
 
     const fsPath = workspace.uri.fsPath;
-    this.selectedName = new PersistentFolderState<string>('musupport_dsc.selectedName', 'None', fsPath);
-
-    this.statusBar.tooltip = "Determines which DSC to look at to determine what package build directory we need to look in";
-    this.packageName = this.selectedName.Value || "None";
-    this.statusBar.text = this.packageName;
-    this.statusBar.tooltip = 'Click to change package';
-    this.statusBar.command = 'musupport.selectPackage';
-    this.statusBar.show();
-
     this.processor = new CppProcessor(workspace);
 
     if (this.processor.IsActive()) {

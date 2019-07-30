@@ -28,7 +28,7 @@ async function DscOnEdit(event: vscode.Uri): Promise<any> {
   logger.info("Found "+parsing.errors.length +" errors");
   //TODO clear existing errors for this uri
   diagnosticCollection.delete(event);
-  let newErrors:vscode.Diagnostic[] = [];
+  let newErrors:Map<vscode.Uri, vscode.Diagnostic[]> = new Map();
   for (const error of parsing.errors) {
     let severity: vscode.DiagnosticSeverity = (error.isFatal)?vscode.DiagnosticSeverity.Error:vscode.DiagnosticSeverity.Warning;
     let lineNo = error.source.lineno - 1;
@@ -37,6 +37,7 @@ async function DscOnEdit(event: vscode.Uri): Promise<any> {
     let start: vscode.Position = new vscode.Position(lineNo, col);
     let end: vscode.Position = new vscode.Position(lineNo, col_end); //TODO figure out where in the line this occurs?
     let range: vscode.Range = new vscode.Range(start,end)
+    let uri = error.source.uri;
 
     let newError:vscode.Diagnostic = {
       severity: severity,
@@ -44,11 +45,16 @@ async function DscOnEdit(event: vscode.Uri): Promise<any> {
       range: range,
       code: error.code_text,
     };
+    if (!newErrors.has(uri)) newErrors.set(uri, []);
     //TODO use error.source.uri to add to the list of sources
-    newErrors.push(newError);
+    newErrors.get(uri).push(newError);
     logger.warn(error.toString());
   }
-  diagnosticCollection.set(event, newErrors);
+  for (const error_item of newErrors){
+    let error_uri = error_item[0];
+    let error_list = error_item[1];
+    diagnosticCollection.set(error_uri, error_list);
+  }
 }
 
 function DscOnDelete(event: vscode.Uri): any {

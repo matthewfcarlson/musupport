@@ -126,6 +126,14 @@ export class DscParser {
     return result;
   }
 
+  // Using the defines as they 
+  public static ResolveVariables(line: string, data: IDscDataExtended): string {
+    if (line.indexOf("$") != -1) {
+      logger.warn("We don't know how to resolve the variable: " + line);
+    }
+    return line;
+  }
+
   public static async ParseFull(dscpath: Uri|PathLike, workspacePath: Uri|PathLike): Promise<IDscDataExtended> {
     let data: IDscDataExtended = {
       filePath: Uri.parse(dscpath.toString()),
@@ -153,7 +161,6 @@ export class DscParser {
       type: null,
       kind: null
     };
-    logger.info("Valid Sections:"+validSections);
 
     //first we need to open the file
     while (parseStack.length != 0){
@@ -171,11 +178,25 @@ export class DscParser {
       // go through all the 
       while (currentParsing.lines.length != 0) {
         var currentLine = currentParsing.lines.shift(); //the lines are pre cleaned
+        currentLine.line = DscParser.ResolveVariables(currentLine.line, data); // resolve any macros/variables that we find
         // comments are removed
         currentParsing.source.column = 0;
         currentParsing.source.lineno = currentLine.lineNo;
+        if (currentLine.line.startsWith("DEFINE")){
+          //TODO handle defines properly
+          logger.warn("We don't know to deal with "+ currentLine.line);
+        }
         if (currentLine.line.startsWith("!include")) { // if we're on the include path
-          //TODO unshift a new parsing onto the stack
+          var path = currentLine.line.replace("!include","").trim();
+          //TODO handle the relative path
+          parseStack.unshift( {
+            source : {
+              uri: Uri.parse(path),
+              lineno: 0,
+              column: 0, //if we don't have a column or don't know, it's 0
+            },
+            lines: null
+          });
           break;
         }
         else if (currentLine.line.startsWith("!if")) {
@@ -230,6 +251,23 @@ export class DscParser {
           data.errors.push(this.MakeError("This line doesn't coorespond to a good section", currentLine.line, currentLine.line, currentParsing.source, true));
           logger.warn("Unknown section: "+currentLine.line);
         }
+        else if (currentSection.type == DscSections.Defines) {
+          if (currentSection.kind.length > 0) { // check if we have any architecutures
+            data.errors.push(this.MakeError("Define sections can't have architectures", currentSection.kind[0], currentLine.line, currentParsing.source, false));
+          }          
+          if (currentLine.line.indexOf("=") == -1) {
+            data.errors.push(this.MakeError("A define statement must have a =", currentLine.line, currentLine.line, currentParsing.source, true));
+            continue;
+          }
+          let parts = currentLine.line.split("=");
+          if (parts.length > 2) {
+            data.errors.push(this.MakeError("Too many equal signs", parts[2], currentLine.line, currentParsing.source, false));
+            continue;
+          }
+          //TODO check if we already have this defines in the DSC
+
+
+        }
         else if (currentSection.type == DscSections.LibraryClasses) {
           //parse the library classes?
           logger.info("Parsing section "+currentSection.type);
@@ -242,6 +280,12 @@ export class DscParser {
       //lines should be zero
       parseStack.shift(); // shift off the parse stack
     }
+
+    //TODO do checks on the final
+    //TODO check if DSC version is included 0x0001001C or 1.28
+    //TODO check if PlatformGuid is valid and good
+    //TODO check PLATFORM_VERSION
+    //TODO check PLATFORM_NAME
     return data;
   }
   

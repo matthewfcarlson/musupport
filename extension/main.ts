@@ -88,9 +88,10 @@ export class MainClass implements vscode.Disposable {
 
         try {
             // TODO: Move this into a class & merge my CPP provider code...
+            // TODO: completely rewrite the CPP provider
             if (config["useAsCppProvider"] != undefined) {
-                if (config["useAsCppProvider"]) InstallCppProvider(this.context, workspaces, resourceRoot);
-                else UninstallCppProvider(this.context, workspaces, resourceRoot);
+                //if (config["useAsCppProvider"]) InstallCppProvider(this.context, workspaces, resourceRoot);
+                //else UninstallCppProvider(this.context, workspaces, resourceRoot);
             }
 
             // Locate the current python interpreter
