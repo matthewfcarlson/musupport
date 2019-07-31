@@ -5,7 +5,7 @@ import * as utils from './utilities';
 import { ProjectDefinition, ProjectManager } from './projectmanager';
 import { stringify } from 'querystring';
 import { logger } from './logger';
-import { InfData, DecData, IDscDataExtended, IDscData, IComponent, DscArch, ISourceInfo, IDscLibClass } from "./parsers/types";
+import { InfData, DecData, IDscDataExtended, IDscData, DscComponent, DscArch, SourceInfo, DscLibClass } from "./parsers/types";
 import { DscParser } from './dsc/parser';
 import { Package, Library } from './parsers/models';
 import { Path } from './utilities';

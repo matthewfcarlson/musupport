@@ -1,5 +1,5 @@
 import { promisifyReadFile, stringTrim, isNumeric, Path } from '../utilities';
-import { IDscData, IDscDataExtended, DscDefines, IDscPcd, ISourceInfo, DscError, DscSections, DscPcdType, IComponent } from '../parsers/types';
+import { IDscData, IDscDataExtended, DscDefines, DscPcd, SourceInfo, DscError, DscSections, DscPcdType, DscComponent } from '../parsers/types';
 import { logger } from "../logger";
 import * as path from 'path';
 import { Uri } from 'vscode';
@@ -17,7 +17,7 @@ interface DscLine {
 }
 
 interface IParseStack {
-  source: ISourceInfo;
+  source: SourceInfo;
   lines: DscLine[];
 }
 
@@ -33,7 +33,7 @@ export class DscParser {
   private static FindDefine(name:string): DscDefines[]{
     return [];
   }
-  private static FindPcd(name:string): IDscPcd[]{
+  private static FindPcd(name:string): DscPcd[]{
     return [];
   }
 
@@ -100,7 +100,7 @@ export class DscParser {
     }
   }
 
-  private static MakeError(msg:string, error_line:string, code_line:string, code_source:ISourceInfo, isFatal:Boolean=false): DscError {
+  private static MakeError(msg:string, error_line:string, code_line:string, code_source:SourceInfo, isFatal:Boolean=false): DscError {
     let column = code_source.column;
     if (column < 0){
       column = 0;
@@ -109,7 +109,7 @@ export class DscParser {
       // only add the offset of the actual error if it isn't the same as the line itself
       column += code_line.indexOf(error_line); 
     }
-    const source:ISourceInfo = {
+    const source:SourceInfo = {
       uri: code_source.uri,
       lineno: code_source.lineno,
       conditional: code_source.conditional,
@@ -127,7 +127,7 @@ export class DscParser {
     return result;
   }
 
-  private static ParseDefineLine(line: string, source: ISourceInfo): DscDefines|DscError {
+  private static ParseDefineLine(line: string, source: SourceInfo): DscDefines|DscError {
     
     if (line.indexOf("=") == -1) {
       return this.MakeError("A define statement must have a =", line, line, source, true);
@@ -327,7 +327,7 @@ export class DscParser {
     if (inf && inf.defines) {
 
       let components = inf.components.map((comp) => {
-        let def: IComponent = {
+        let def: DscComponent = {
           archs: null,
           infPath: new Path(comp),
           libraryClasses: null,

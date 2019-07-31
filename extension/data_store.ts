@@ -5,7 +5,7 @@ import { promisifyExists, promisifyGlob, promisifyIsDir, delay, getPackageFromPa
 import { InfPaser } from "./parsers/inf_parser";
 import { DecPaser } from "./parsers/dec_parser";
 import { ExceptionHandler } from "winston";
-import { InfData, DecData, IDscData, IDscLibClass } from "./parsers/types";
+import { InfData, DecData, IDscData, DscLibClass } from "./parsers/types";
 import { PathLike } from "fs";
 import { Library, Package } from "./parsers/models";
 import { DscParser } from "./dsc/parser";
@@ -381,7 +381,7 @@ export class LibraryStore {
             );
     }
 
-    findLibraryByInfo(info: IDscLibClass) {
+    findLibraryByInfo(info: DscLibClass) {
         // TODO: Optimize - O(n^2) operation
         for (let lib of this.libraries) {
             // Search the global list of INF's for the provided info

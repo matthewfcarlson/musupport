@@ -6,12 +6,12 @@ export interface InfData {
   sources: string[];
   packages: string[];
   pcds: string[];
-  guids: IDscGuid[];
-  protocols: IDscGuid[];
+  guids: DscGuid[];
+  protocols: DscGuid[];
   infPath: Path;
   defines: Map<string, string>;
   components: string[];
-  libraryClasses: IDscLibClass[];
+  libraryClasses: DscLibClass[];
 }
 
 // DECs are a subset of INFs
@@ -20,9 +20,9 @@ export interface DecData {
   infPath: Path;
   defines: Map<string, string>;
   components: string[];
-  libraryClasses: IDscLibClass[];
-  guids: IDscGuid[];
-  protocols: IDscGuid[];
+  libraryClasses: DscLibClass[];
+  guids: DscGuid[];
+  protocols: DscGuid[];
   pcds: string[];
 }
 
@@ -31,9 +31,9 @@ export interface DecData {
 export interface IDscData {
   filePath: Path;
   defines: Map<string, string>;
-  libraries: IDscLibClass[];
-  components: IComponent[];
-  pcds: IDscPcd[];
+  libraries: DscLibClass[];
+  components: DscComponent[];
+  pcds: DscPcd[];
   //libraries: Map<string, Map<string, string>>; // arch -> library name -> library inf path
   //libraries: Map<string, [string, string][]>; // arch -> list of [library name, library inf path]
   //components: Map<string, string[]>; // arch -> component inf paths
@@ -44,30 +44,32 @@ export interface IDscDataExtended {
   filePath: Uri;
   defines: DscDefines[],
   findDefine: (string)=>DscDefines[]; //search for a define by name
-  libraries: IDscLibClass[],
-  pcds: IDscPcd[],
-  findPcd: (string)=>IDscPcd[];
+  libraries: DscLibClass[],
+  pcds: DscPcd[],
+  findPcd: (string)=>DscPcd[];
   toDscData: ()=>IDscData; //returns the DSC data in a simpler format
-  symbols: IDScSymbol[];
+  symbols: DscSymbol[];
   errors: DscError[]
 }
 
-export interface ISourceInfo {
+export class SourceInfo {
   uri: Uri;
   lineno: number;
-  conditional?: IDscConditional;
+  conditional?: DscConditional;
   column: number; //if we don't have a column or don't know, it's 0
+  //TODO handle what type of section we are currently in? common, X64, DXE_DRIVER, etc
+  //architectures?:
 }
 
 export class DscDefines {
-  source: ISourceInfo;
+  source: SourceInfo;
   key:string;
   value:string;
   toString: ()=>string // a function that returns a string
 }
 
 export class DscError{
-  source: ISourceInfo;
+  source: SourceInfo;
   code_text: string;
   error_msg: string;
   isFatal: Boolean;
@@ -109,8 +111,8 @@ export enum DscSections {
   DefaultStores
 }
 
-export interface IDscPcd {
-  source: ISourceInfo;
+export class DscPcd {
+  source: SourceInfo;
   tokenspace: string;
   tokenname: string;
   type:DscPcdType; //the type of PCD
@@ -120,36 +122,52 @@ export interface IDscPcd {
   toString: ()=>string // a function that returns a string
 }
 //the conditional
-export interface IDscConditional {
+export class DscConditional {
   conditions: string[]; //a list of all the conditionals that took us to this point
   eval: Boolean; //the result of the evaluation
 }
 
-export interface IDScSymbol {
-  source: ISourceInfo,
-  name: string,
+export class DscSymbol {
+  source: SourceInfo;
+  name: string;
   value: any
 }
 
-export interface IComponent {
-  source: ISourceInfo;
+export class DscComponent {
+  source: SourceInfo;
   infPath: Path;
   archs: DscArch[];
-  libraryClasses?:IDscLibClass[];
+  libraryClasses?:DscLibClass[];
+  defines?:DscDefines[];
+  pcds?:DscPcd[];
+  buildOptions?: InfBuildOption[];
   toString: ()=>string; // a function that returns a string
 }
 
-export interface IDscLibClass {
-  source: ISourceInfo;
+//TODO revisit this?
+export class DscLibClass {
+  source: SourceInfo;
   infPath: Path;
   archs: DscArch[];
   name: string;
   class: string;
-  toString: ()=>string; // a function that returns a string
-  //BuildOptions: DscBuildOption[];
+  toString = ():string => {
+    return this.class + "|" + this.infPath;
+  }; // a function that returns a string
 }
 
-export interface IDscGuid {
+export class DscGuid {
   name: string;
   guid: string;
+}
+
+
+export class InfBuildOption {
+  source: SourceInfo;
+  compilerTarget: string; //MSFT, INTEL, GCC, LLVM, etc
+  flagName: string; //*_*_*_CC_FLAGs=
+  flagValue: string; //the value of the flag
+  toString =  (): string => {
+    return this.compilerTarget+":"+this.flagName+" = "+this.flagValue;
+  }; // a function that returns a string
 }

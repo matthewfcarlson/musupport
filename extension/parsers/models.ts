@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { IDscData, IDscDataExtended, IComponent, IDscLibClass, InfData, DecData, DscPcdType, IDscGuid } from "./types";
+import { IDscData, IDscDataExtended, DscComponent, DscLibClass, InfData, DecData, DscPcdType, DscGuid } from "./types";
 import * as utils from '../utilities';
 import { Path } from '../utilities';
 import { InfPaser } from './inf_parser';
@@ -35,10 +35,10 @@ export class Package {
         }
         return null;
     }
-    get exportedGuids(): IDscGuid[] {
+    get exportedGuids(): DscGuid[] {
         return (this.dec) ? this.dec.guids : null;
     }
-    get exportedProtocols(): IDscGuid[] {
+    get exportedProtocols(): DscGuid[] {
         return (this.dec) ? this.dec.protocols : null;
     }
     get exportedPcds(): string[] {
@@ -176,10 +176,10 @@ export class Package {
  */
 export class Component {
     name: string;
-    data: IComponent;
+    data: DscComponent;
     filePath: Path;
 
-    constructor(data: IComponent, pkg: Package = null, name: string = null) {
+    constructor(data: DscComponent, pkg: Package = null, name: string = null) {
         this.data = data;
         this.name = name;
 
@@ -199,7 +199,7 @@ export class Component {
 export class Library {
     name: string;
     class: string;
-    data: IComponent;
+    data: DscComponent;
     package: Package;  // The package that the library belongs to
     filePath: Path;
 
@@ -217,7 +217,7 @@ export class Library {
     static fromInfData(info: InfData, pkg: Package = null) : Library {
         if (info && info.defines) {
             let infPath = new Path(info.infPath);
-            let comp: IDscLibClass = {
+            let comp: DscLibClass = {
                 name: infPath.basename,
                 class: null,
                 infPath: infPath,
@@ -264,7 +264,7 @@ export class Library {
         return `${this.class||"NULL"}|${this.filePath}`;
     }
 
-    constructor(data: IDscLibClass, pkg: Package = null) {
+    constructor(data: DscLibClass, pkg: Package = null) {
         this.data = data;
         this.package = pkg;
 
