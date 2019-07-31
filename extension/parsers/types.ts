@@ -43,11 +43,11 @@ export interface IDscData {
 export interface IDscDataExtended {
   filePath: Uri;
   defines: DscDefines[],
-  findDefine: (string)=>DscDefines[]; //search for a define by name
+  findDefine: (string) => DscDefines[]; //search for a define by name
   libraries: DscLibClass[],
   pcds: DscPcd[],
-  findPcd: (string)=>DscPcd[];
-  toDscData: ()=>IDscData; //returns the DSC data in a simpler format
+  findPcd: (string) => DscPcd[];
+  toDscData: () => IDscData; //returns the DSC data in a simpler format
   symbols: DscSymbol[];
   errors: DscError[]
 }
@@ -63,17 +63,21 @@ export class SourceInfo {
 
 export class DscDefines {
   source: SourceInfo;
-  key:string;
-  value:string;
-  toString: ()=>string // a function that returns a string
+  key: string;
+  value: string;
+  toString= ():string => {
+    return this.key + "=" + this.value;
+  }
 }
 
-export class DscError{
+export class DscError {
   source: SourceInfo;
   code_text: string;
   error_msg: string;
   isFatal: Boolean;
-  toString: ()=>string // a function that returns a string
+  toString = ():string => {
+    return this.error_msg + "@" + this.source.uri.toString() + ":" + this.source.lineno
+  }
 }
 
 export enum DscPcdType {
@@ -115,11 +119,14 @@ export class DscPcd {
   source: SourceInfo;
   tokenspace: string;
   tokenname: string;
-  type:DscPcdType; //the type of PCD
+  value: string;
+  type: DscPcdType; //the type of PCD
   archs: DscArch[];
-  id?:number;
-  variableGuid?:string;
-  toString: ()=>string // a function that returns a string
+  id?: number;
+  variableGuid?: string;
+  toString = (): string => {
+    return this.type.toString() + "-" + this.tokenspace + "." + this.tokenname + "|" + this.value;
+  }; // a function that returns a string
 }
 //the conditional
 export class DscConditional {
@@ -137,11 +144,13 @@ export class DscComponent {
   source: SourceInfo;
   infPath: Path;
   archs: DscArch[];
-  libraryClasses?:DscLibClass[];
-  defines?:DscDefines[];
-  pcds?:DscPcd[];
+  libraryClasses?: DscLibClass[];
+  defines?: DscDefines[];
+  pcds?: DscPcd[];
   buildOptions?: InfBuildOption[];
-  toString: ()=>string; // a function that returns a string
+  toString = (): string => {
+    return this.infPath.toString();
+  }; // a function that returns a string
 }
 
 //TODO revisit this?
@@ -151,7 +160,7 @@ export class DscLibClass {
   archs: DscArch[];
   name: string;
   class: string;
-  toString = ():string => {
+  toString = (): string => {
     return this.class + "|" + this.infPath;
   }; // a function that returns a string
 }
@@ -167,7 +176,7 @@ export class InfBuildOption {
   compilerTarget: string; //MSFT, INTEL, GCC, LLVM, etc
   flagName: string; //*_*_*_CC_FLAGs=
   flagValue: string; //the value of the flag
-  toString =  (): string => {
-    return this.compilerTarget+":"+this.flagName+" = "+this.flagValue;
+  toString = (): string => {
+    return this.compilerTarget + ":" + this.flagName + " = " + this.flagValue;
   }; // a function that returns a string
 }

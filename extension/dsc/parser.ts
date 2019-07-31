@@ -119,10 +119,7 @@ export class DscParser {
       source: source,
       code_text:code_line,
       error_msg: msg,
-      isFatal: isFatal,
-      toString: () => {
-        return msg + "@" + source.uri.toString() + ":" + source.lineno
-      }
+      isFatal: isFatal
     }
     return result;
   }
