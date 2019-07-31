@@ -1,5 +1,5 @@
 import { promisifyReadFile, stringTrim, isNumeric, Path } from '../utilities';
-import { IDscData, IDscDataExtended, IDscDefines, IDscPcd, ISourceInfo, IDscError, DscSections, DscPcdType, IComponent } from '../parsers/types';
+import { IDscData, IDscDataExtended, DscDefines, IDscPcd, ISourceInfo, DscError, DscSections, DscPcdType, IComponent } from '../parsers/types';
 import { logger } from "../logger";
 import * as path from 'path';
 import { Uri } from 'vscode';
@@ -25,11 +25,12 @@ interface IParseStack {
 interface IParseSection {
   type: DscSections|DscPcdType;
   kind: string[]; //common, x64, common.PEIM
+  variables: DscDefines[]; // variables we've found in this section 
 }
 
 export class DscParser {
 
-  private static FindDefine(name:string): IDscDefines[]{
+  private static FindDefine(name:string): DscDefines[]{
     return [];
   }
   private static FindPcd(name:string): IDscPcd[]{
@@ -55,9 +56,8 @@ export class DscParser {
 
   // This get the lines from a DSC
   private static async GetCleanLinesFromUri(file: Uri): Promise<DscLine[]> {
-    var lines = [];
-
-    //TODO figure out how to read a URI instead of relying on the filesystem
+    
+    //TODO figure out how to read a URI instead of relying on the filesystem read file
     let filePath = file.fsPath;
     try {
       let fileContents = await promisifyReadFile(filePath);
@@ -100,21 +100,22 @@ export class DscParser {
     }
   }
 
-  private static MakeError(msg:string, error_line:string, code_line:string, code_source:ISourceInfo, isFatal:Boolean=false): IDscError {
+  private static MakeError(msg:string, error_line:string, code_line:string, code_source:ISourceInfo, isFatal:Boolean=false): DscError {
     let column = code_source.column;
-    if (column == 0){ // if we have a zero column, figure out where the error_line occurs in code_line
-      column = code_line.indexOf(error_line); 
-    }
-    if (column < 0) {
+    if (column < 0){
       column = 0;
-    } 
+    }
+    if (error_line.length != code_line.length) {
+      // only add the offset of the actual error if it isn't the same as the line itself
+      column += code_line.indexOf(error_line); 
+    }
     const source:ISourceInfo = {
       uri: code_source.uri,
       lineno: code_source.lineno,
       conditional: code_source.conditional,
       column: column
     }
-    var result: IDscError = {
+    var result: DscError = {
       source: source,
       code_text:code_line,
       error_msg: msg,
@@ -126,12 +127,40 @@ export class DscParser {
     return result;
   }
 
+  private static ParseDefineLine(line: string, source: ISourceInfo): DscDefines|DscError {
+    
+    if (line.indexOf("=") == -1) {
+      return this.MakeError("A define statement must have a =", line, line, source, true);
+    }
+    let parts = line.split("=");
+    if (parts.length > 2) {
+      this.MakeError("Too many equal signs", parts[2], line, source, false);
+    }
+    let key = parts[0].trim();
+    if (key.indexOf(" ") != -1) {
+      this.MakeError("The define key can't have spaces", key, line, source, false);
+    }
+    //TODO check for more invalid characters in value/key
+    let value = parts[1].trim();
+    if (value.indexOf(" ") != -1 && (!value.startsWith('"') || !value.endsWith('"'))) {
+      this.MakeError("You need to wrap values with spaces in quotes", value, line, source, false);
+    }
+    value = value.replace('"', ""); // strip the " off
+    return {
+      source: source,
+      key: key,
+      value: value
+    };
+  }
+
   // Using the defines as they 
-  public static ResolveVariables(line: string, data: IDscDataExtended): string {
-    if (line.indexOf("$") != -1) {
+  public static ResolveVariables(line: DscLine, data: IDscDataExtended, section: IParseSection): string {
+    if (line.line.indexOf("$") != -1) {
       logger.warn("We don't know how to resolve the variable: " + line);
     }
-    return line;
+    let resolved_line = line.line;
+    // Add this ymbol to the list of symbols we can resolve
+    return resolved_line;
   }
 
   public static async ParseFull(dscpath: Uri|PathLike, workspacePath: Uri|PathLike): Promise<IDscDataExtended> {
@@ -143,7 +172,8 @@ export class DscParser {
       pcds: [],
       findPcd: DscParser.FindPcd,
       toDscData: DscParser.ToDscData, //returns the DSC data in a simpler format
-      errors: []
+      errors: [],
+      symbols: [],
     };
 
     let parseStack: IParseStack[] = [];
@@ -159,7 +189,8 @@ export class DscParser {
     let validSections = DscParser.GetPossibleSections();
     let currentSection:IParseSection = {
       type: null,
-      kind: null
+      kind: null,
+      variables: [],
     };
 
     //first we need to open the file
@@ -178,7 +209,7 @@ export class DscParser {
       // go through all the 
       while (currentParsing.lines.length != 0) {
         var currentLine = currentParsing.lines.shift(); //the lines are pre cleaned
-        currentLine.line = DscParser.ResolveVariables(currentLine.line, data); // resolve any macros/variables that we find
+        currentLine.line = DscParser.ResolveVariables(currentLine, data, currentSection); // resolve any macros/variables that we find
         // comments are removed
         currentParsing.source.column = 0;
         currentParsing.source.lineno = currentLine.lineNo;
@@ -243,30 +274,28 @@ export class DscParser {
             currentSection.type = null;
             continue;
           }
-          
+          //clear out our current section tyoe
           currentSection.type = sectionTypeEnum;
           currentSection.kind = sectionTypeDescriptors;
+          currentSection.variables = [];
+          if (currentSection.type == DscSections.Defines && currentSection.kind.length > 0) { // check if we have any architecutures for defines
+            data.errors.push(this.MakeError("Define sections can't have architectures", currentSection.kind[0], currentLine.line, currentParsing.source, false));
+          }          
         }
         else if (currentSection.type == null){
           data.errors.push(this.MakeError("This line doesn't coorespond to a good section", currentLine.line, currentLine.line, currentParsing.source, true));
           logger.warn("Unknown section: "+currentLine.line);
         }
         else if (currentSection.type == DscSections.Defines) {
-          if (currentSection.kind.length > 0) { // check if we have any architecutures
-            data.errors.push(this.MakeError("Define sections can't have architectures", currentSection.kind[0], currentLine.line, currentParsing.source, false));
-          }          
-          if (currentLine.line.indexOf("=") == -1) {
-            data.errors.push(this.MakeError("A define statement must have a =", currentLine.line, currentLine.line, currentParsing.source, true));
-            continue;
-          }
-          let parts = currentLine.line.split("=");
-          if (parts.length > 2) {
-            data.errors.push(this.MakeError("Too many equal signs", parts[2], currentLine.line, currentParsing.source, false));
+          let results = this.ParseDefineLine(currentLine.line, currentParsing.source);
+          
+          if (results instanceof DscError) {
+            data.errors.push(results);
             continue;
           }
           //TODO check if we already have this defines in the DSC
-
-
+          data.defines.push(results);
+          
         }
         else if (currentSection.type == DscSections.LibraryClasses) {
           //parse the library classes?

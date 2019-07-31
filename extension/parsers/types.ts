@@ -42,13 +42,14 @@ export interface IDscData {
 
 export interface IDscDataExtended {
   filePath: Uri;
-  defines: IDscDefines[],
-  findDefine: (string)=>IDscDefines[]; //search for a define by name
+  defines: DscDefines[],
+  findDefine: (string)=>DscDefines[]; //search for a define by name
   libraries: IDscLibClass[],
   pcds: IDscPcd[],
   findPcd: (string)=>IDscPcd[];
   toDscData: ()=>IDscData; //returns the DSC data in a simpler format
-  errors: IDscError[]
+  symbols: IDScSymbol[];
+  errors: DscError[]
 }
 
 export interface ISourceInfo {
@@ -58,14 +59,14 @@ export interface ISourceInfo {
   column: number; //if we don't have a column or don't know, it's 0
 }
 
-export interface IDscDefines {
+export class DscDefines {
   source: ISourceInfo;
   key:string;
   value:string;
   toString: ()=>string // a function that returns a string
 }
 
-export interface IDscError{
+export class DscError{
   source: ISourceInfo;
   code_text: string;
   error_msg: string;
@@ -122,6 +123,12 @@ export interface IDscPcd {
 export interface IDscConditional {
   conditions: string[]; //a list of all the conditionals that took us to this point
   eval: Boolean; //the result of the evaluation
+}
+
+export interface IDScSymbol {
+  source: ISourceInfo,
+  name: string,
+  value: any
 }
 
 export interface IComponent {
