@@ -117,10 +117,14 @@ export class DscParser {
     }
     var result: DscError = {
       source: source,
-      code_text:code_line,
+      code_text: code_line,
       error_msg: msg,
-      isFatal: isFatal
-    }
+      isFatal: isFatal,
+    };
+    result.source = source;
+    result.code_text = code_line;
+    result.error_msg = msg;
+    result.isFatal = isFatal;
     return result;
   }
 

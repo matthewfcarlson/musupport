@@ -75,6 +75,13 @@ export class DscError {
   code_text: string;
   error_msg: string;
   isFatal: Boolean;
+  constructor( public source: SourceInfo,
+               public code_text: string,
+               public error_msg: string,
+               public isFatal: Boolean
+              ) {
+                
+              }
   toString = ():string => {
     return this.error_msg + "@" + this.source.uri.toString() + ":" + this.source.lineno
   }

@@ -34,8 +34,11 @@ async function DscOnEdit(event: vscode.Uri): Promise<any> {
     let lineNo = error.source.lineno - 1;
     let col = error.source.column - 1;
     let col_end = col + error.code_text.length;
+    if (lineNo < 0) lineNo = 0;
+    if (col < 0) col = 0;
+    if (col_end < 0) col_end = 0;
     let start: vscode.Position = new vscode.Position(lineNo, col);
-    let end: vscode.Position = new vscode.Position(lineNo, col_end); //TODO figure out where in the line this occurs?
+    let end = start.translate(0,error.code_text.length)
     let range: vscode.Range = new vscode.Range(start,end)
     let uri = error.source.uri;
 
