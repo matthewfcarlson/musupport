@@ -21,11 +21,11 @@ interface IParseStack {
   lines: DscLine[];
 }
 
-// A section that we want to parse like Define or 
+// A section that we want to parse like Define or
 interface IParseSection {
   type: DscSections|DscPcdType;
   kind: string[]; //common, x64, common.PEIM
-  variables: DscDefines[]; // variables we've found in this section 
+  variables: DscDefines[]; // variables we've found in this section
 }
 
 export class DscParser {
@@ -56,7 +56,7 @@ export class DscParser {
 
   // This get the lines from a DSC
   private static async GetCleanLinesFromUri(file: Uri): Promise<DscLine[]> {
-    
+
     //TODO figure out how to read a URI instead of relying on the filesystem read file
     let filePath = file.fsPath;
     try {
@@ -67,7 +67,7 @@ export class DscParser {
         let line_length = line.length;
         line = line.trimLeft();
         let column = line_length - line.length; //keep track of how much we snipped
-        
+
         //remove comments
         let pound_index = line.indexOf("#");
         if (pound_index == 0) { // if it's the first character, just make sure it's an empty string
@@ -78,7 +78,7 @@ export class DscParser {
         }
         //make sure to clean up after the comment
         let final_line = line.replace('\n',"").replace('\r',"").trimRight(); //remove new line characters, we will be adding our own
-        
+
         //put the data in that we care about
         var line_data: DscLine = {
           line: final_line,
@@ -107,7 +107,7 @@ export class DscParser {
     }
     if (error_line.length != code_line.length) {
       // only add the offset of the actual error if it isn't the same as the line itself
-      column += code_line.indexOf(error_line); 
+      column += code_line.indexOf(error_line);
     }
     const source:SourceInfo = {
       uri: code_source.uri,
@@ -115,21 +115,12 @@ export class DscParser {
       conditional: code_source.conditional,
       column: column
     }
-    var result: DscError = {
-      source: source,
-      code_text: code_line,
-      error_msg: msg,
-      isFatal: isFatal,
-    };
-    result.source = source;
-    result.code_text = code_line;
-    result.error_msg = msg;
-    result.isFatal = isFatal;
+    var result = new DscError(source, code_line, msg, isFatal);
     return result;
   }
 
   private static ParseDefineLine(line: string, source: SourceInfo): DscDefines|DscError {
-    
+
     if (line.indexOf("=") == -1) {
       return this.MakeError("A define statement must have a =", line, line, source, true);
     }
@@ -154,7 +145,7 @@ export class DscParser {
     };
   }
 
-  // Using the defines as they 
+  // Using the defines as they
   public static ResolveVariables(line: DscLine, data: IDscDataExtended, section: IParseSection): string {
     if (line.line.indexOf("$") != -1) {
       logger.warn("We don't know how to resolve the variable: " + line);
@@ -206,8 +197,8 @@ export class DscParser {
           continue;
         }
       }
-      
-      // go through all the 
+
+      // go through all the
       while (currentParsing.lines.length != 0) {
         var currentLine = currentParsing.lines.shift(); //the lines are pre cleaned
         currentLine.line = DscParser.ResolveVariables(currentLine, data, currentSection); // resolve any macros/variables that we find
@@ -241,7 +232,7 @@ export class DscParser {
         else if (currentLine.line == "!endif") {
           //TODO handle the end of the if
         }
-        
+
         else if (currentLine.line.startsWith("[") && currentLine.line.endsWith("]")) { //if we're on a new section
           //handle the new section
           let sectionTypes = currentLine.line.replace("[","").replace("]","").split(",").map(stringTrim); //get a list of the sections in the brackets
@@ -249,7 +240,7 @@ export class DscParser {
             return x.split(".");
           });
           let sectionType = sectionTypeLists[0][0];
-          
+
           for (var i = 0; i < sectionTypeLists.length; i++){
             let currentSectionType = sectionTypeLists[i].shift();
             if (currentSectionType != sectionType) { //make sure all the sections match
@@ -261,15 +252,15 @@ export class DscParser {
               data.errors.push(this.MakeError("Section type is not a valid section", currentSectionType, currentLine.line, currentParsing.source, true));
             }
           }
-          
+
           let sectionTypeDescriptors = [];
           sectionTypeLists.forEach((x)=>{
             let type = x.join(".");
             sectionTypeDescriptors.push(type);
           });
-          
+
           var sectionTypeEnum:DscPcdType|DscSections = sectionType.startsWith("Pcds")?DscPcdType[sectionType.substr(4)]:DscSections[sectionType];
-          
+
           if (sectionTypeEnum == undefined) {
             data.errors.push(this.MakeError("Section type is not a valid section", sectionType, currentLine.line, currentParsing.source, true));
             currentSection.type = null;
@@ -281,7 +272,7 @@ export class DscParser {
           currentSection.variables = [];
           if (currentSection.type == DscSections.Defines && currentSection.kind.length > 0) { // check if we have any architecutures for defines
             data.errors.push(this.MakeError("Define sections can't have architectures", currentSection.kind[0], currentLine.line, currentParsing.source, false));
-          }          
+          }
         }
         else if (currentSection.type == null){
           data.errors.push(this.MakeError("This line doesn't coorespond to a good section", currentLine.line, currentLine.line, currentParsing.source, true));
@@ -289,14 +280,14 @@ export class DscParser {
         }
         else if (currentSection.type == DscSections.Defines) {
           let results = this.ParseDefineLine(currentLine.line, currentParsing.source);
-          
+
           if (results instanceof DscError) {
             data.errors.push(results);
             continue;
           }
           //TODO check if we already have this defines in the DSC
           data.defines.push(results);
-          
+
         }
         else if (currentSection.type == DscSections.LibraryClasses) {
           //parse the library classes?
@@ -305,7 +296,7 @@ export class DscParser {
         else {
           //We don't know what to do with this line
         }
-        
+
       } // end of lines == 0
       //lines should be zero
       parseStack.shift(); // shift off the parse stack
@@ -318,7 +309,7 @@ export class DscParser {
     //TODO check PLATFORM_NAME
     return data;
   }
-  
+
   public static async Parse(dscpath: Path, workspacePath: Uri): Promise<IDscData> {
     //TODO eventually write a second reduced parser. For now, just do a full parse and trim it down
     //return (await this.ParseFull(dscpath, workspacePath)).toDscData();

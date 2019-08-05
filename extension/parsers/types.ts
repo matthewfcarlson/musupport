@@ -71,17 +71,12 @@ export class DscDefines {
 }
 
 export class DscError {
-  source: SourceInfo;
-  code_text: string;
-  error_msg: string;
-  isFatal: Boolean;
+  // arguments with visibility in constructor are automatically added as class members
   constructor( public source: SourceInfo,
                public code_text: string,
                public error_msg: string,
                public isFatal: Boolean
-              ) {
-                
-              }
+              ) { };
   toString = ():string => {
     return this.error_msg + "@" + this.source.uri.toString() + ":" + this.source.lineno
   }
