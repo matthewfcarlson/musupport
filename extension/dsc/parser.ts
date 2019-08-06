@@ -207,7 +207,7 @@ export class DscParser {
         }
       }
       
-      // go through all the 
+      // go through all the line
       while (currentParsing.lines.length != 0) {
         var currentLine = currentParsing.lines.shift(); //the lines are pre cleaned
         currentLine.line = DscParser.ResolveVariables(currentLine, data, currentSection); // resolve any macros/variables that we find
