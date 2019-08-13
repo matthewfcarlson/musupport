@@ -136,11 +136,10 @@ export class DscParser {
     if (key.indexOf(" ") != -1) {
       this.MakeError("The library class can't have spaces", key, line, source, false);
     }
-
-    let infPath = "";
+    
+    let infPath = parts[1].trim();
+    //TODO: Check to make sure this path exists
     let archs = DscParser.ParseSectionDescriptors(section.kind);
-    //TODO figure out how to get the current architecture that this line applies to?
-    //From source info- it's space inefficent :( Maybe
     var result = new DscLibClass(source, new Path(infPath), archs, key, "");
     return result;
   }
