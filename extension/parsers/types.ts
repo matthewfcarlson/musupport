@@ -97,14 +97,35 @@ export enum DscPcdType {
   Unknown
 }
 
+export class DscSectionDescription {
+  constructor (
+    public arch: DscArch|string,
+    public type: DscModuleType|string)
+  {};
+}
+
 export enum DscArch {
   X64,
   X84,
   ARM,
   AARCH64,
   EBC,
-  COMMON,
-  UNKNOWN
+  COMMON // if there isn't one specified
+}
+
+export enum DscModuleType{
+  BASE,
+  SEC,
+  PEI_CORE,
+  PEIM,
+  DXE_CORE,
+  DXE_DRIVER,
+  DXE_RUNTIME_DRIVER,
+  DXE_SAL_DRIVER,
+  DXE_SMM_DRIVER,
+  SMM_CORE,
+  UEFI_DRIVER,
+  s
 }
 
 export enum DscSections {
@@ -145,7 +166,7 @@ export class DscSymbol {
 export class DscComponent {
   source: SourceInfo;
   infPath: Path;
-  archs: DscArch[];
+  descriptors: DscSectionDescription[];
   libraryClasses?: DscLibClass[];
   defines?: DscDefines[];
   pcds?: DscPcd[];
@@ -157,13 +178,14 @@ export class DscComponent {
 
 //TODO revisit this?
 export class DscLibClass {
-  source: SourceInfo;
-  infPath: Path;
-  archs: DscArch[];
-  name: string;
-  class: string;
+  constructor ( public source: SourceInfo,
+                public infPath: Path,
+                public descriptors: DscSectionDescription[],
+                public name: string,
+                public className: string
+    ) { };
   toString = (): string => {
-    return this.class + "|" + this.infPath;
+    return this.className + "|" + this.infPath;
   }; // a function that returns a string
 }
 

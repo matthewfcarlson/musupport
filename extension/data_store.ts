@@ -385,7 +385,7 @@ export class LibraryStore {
         // TODO: Optimize - O(n^2) operation
         for (let lib of this.libraries) {
             // Search the global list of INF's for the provided info
-            if (lib.class == info.class && lib.filePath.endsWithPath(info.infPath)) {
+            if (lib.class == info.className && lib.filePath.endsWithPath(info.infPath)) {
                 return lib;
             }
         }

@@ -73,9 +73,9 @@ export class InfPaser {
             if (path) { path = path.trim(); }
             if (classname && path) {
                 let item: DscLibClass = {
-                    class: classname,
+                    className: classname,
                     name: null,
-                    archs: null,
+                    descriptors: null,
                     infPath: new Path(path), // relative path
                     source: null
                 };

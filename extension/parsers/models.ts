@@ -92,7 +92,7 @@ export class Package {
                         this.referencedLibraries.push(lib);
                     }
                     else {
-                        logger.warn(`Could not find library ${info.class}|${info.infPath} referenced by DSC ${this.dsc.filePath.basename}`);
+                        logger.warn(`Could not find library ${info.className}|${info.infPath} referenced by DSC ${this.dsc.filePath.basename}`);
                     }
                 }
             }
@@ -203,7 +203,7 @@ export class Library {
     package: Package;  // The package that the library belongs to
     filePath: Path;
 
-    get archs() { return this.data.archs; }
+    get archs() { return this.data.descriptors; }
 
     static async parseInf(infFile: Path) : Promise<Library> {
         try {
@@ -219,9 +219,9 @@ export class Library {
             let infPath = new Path(info.infPath);
             let comp: DscLibClass = {
                 name: infPath.basename,
-                class: null,
+                className: null,
                 infPath: infPath,
-                archs: [], // TODO: Populate from INF
+                descriptors: [], // TODO: Populate from INF
                 source: null
             };
 
@@ -235,10 +235,10 @@ export class Library {
             if (lclass.indexOf('|') > 0) {
                 let [def_classname, def_classtypes] = lclass.split('|');
                 if (def_classname) {
-                    comp.class = def_classname.trim();
+                    comp.className = def_classname.trim();
                 }
             } else {
-                comp.class = lclass.trim();
+                comp.className = lclass.trim();
             }
 
             // Get the INF basename
@@ -271,7 +271,7 @@ export class Library {
         if (data) {
             this.filePath = data.infPath;
             this.name = (data.name) ? data.name.toString() : null;
-            this.class = (data.class) ? data.class.toString() : null;
+            this.class = (data.className) ? data.className.toString() : null;
         }
 
         if (!this.name && this.filePath) {

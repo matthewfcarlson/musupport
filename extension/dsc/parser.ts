@@ -1,5 +1,5 @@
 import { promisifyReadFile, stringTrim, isNumeric, Path } from '../utilities';
-import { IDscData, IDscDataExtended, DscDefines, DscPcd, SourceInfo, DscError, DscSections, DscPcdType, DscComponent } from '../parsers/types';
+import { IDscData, IDscDataExtended, DscDefines, DscPcd, SourceInfo, DscError, DscSections, DscPcdType, DscComponent, DscLibClass, DscSectionDescription } from '../parsers/types';
 import { logger } from "../logger";
 import * as path from 'path';
 import { Uri } from 'vscode';
@@ -116,6 +116,32 @@ export class DscParser {
       column: column
     }
     var result = new DscError(source, code_line, msg, isFatal);
+    return result;
+  }
+
+  // Converts an array of strings such as ["COMMON.x64", "IPC.DXE_DRIVER"]
+  private static ParseSectionDescriptors(parts: string[]): DscSectionDescription[] {
+    return [];
+  }
+
+  private static ParseLibraryClassLine(line: string, source: SourceInfo, section: IParseSection): DscLibClass|DscError {
+    if (line.indexOf("|") == -1) {
+      return this.MakeError("A library class statement must have a =", line, line, source, true);
+    }
+    let parts = line.split("|");
+    if (parts.length > 2) {
+      this.MakeError("Too many pipes signs", parts[2], line, source, false);
+    }
+    let key = parts[0].trim();
+    if (key.indexOf(" ") != -1) {
+      this.MakeError("The library class can't have spaces", key, line, source, false);
+    }
+
+    let infPath = "";
+    let archs = DscParser.ParseSectionDescriptors(section.kind);
+    //TODO figure out how to get the current architecture that this line applies to?
+    //From source info- it's space inefficent :( Maybe
+    var result = new DscLibClass(source, new Path(infPath), archs, key, "");
     return result;
   }
 
@@ -270,8 +296,8 @@ export class DscParser {
           currentSection.type = sectionTypeEnum;
           currentSection.kind = sectionTypeDescriptors;
           currentSection.variables = [];
-          if (currentSection.type == DscSections.Defines && currentSection.kind.length > 0) { // check if we have any architecutures for defines
-            data.errors.push(this.MakeError("Define sections can't have architectures", currentSection.kind[0], currentLine.line, currentParsing.source, false));
+          if (currentSection.type == DscSections.Defines && currentSection.kind.length > 0 && currentSection.kind[0].length > 0) { // check if we have any architecutures for defines
+            data.errors.push(this.MakeError("Define sections can't have architectures" + currentSection.kind[0], currentSection.kind[0], currentLine.line, currentParsing.source, false));
           }
         }
         else if (currentSection.type == null){
@@ -290,8 +316,14 @@ export class DscParser {
 
         }
         else if (currentSection.type == DscSections.LibraryClasses) {
-          //parse the library classes?
-          logger.info("Parsing section "+currentSection.type);
+          let results = this.ParseLibraryClassLine(currentLine.line, currentParsing.source, currentSection);
+
+          if (results instanceof DscError) {
+            data.errors.push(results);
+            continue;
+          }
+          //TODO check if we already have this library class in the DSC
+          data.libraries.push(results);
         }
         else {
           //We don't know what to do with this line
@@ -320,7 +352,7 @@ export class DscParser {
 
       let components = inf.components.map((comp) => {
         let def: DscComponent = {
-          archs: null,
+          descriptors: null,
           infPath: new Path(comp),
           libraryClasses: null,
           source: null
