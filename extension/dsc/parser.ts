@@ -318,7 +318,7 @@ export class DscParser {
 
         }
         else if (currentSection.type == DscSections.SkuIds) { //SKU ID's
-          let results = this.ParseLibrarySkuIdLine(currentLine.line, currentParsing.source);
+          let results = this.ParseSkuIdLine(currentLine.line, currentParsing.source);
           if (results instanceof DscError) {
             data.errors.push(results);
             continue;
