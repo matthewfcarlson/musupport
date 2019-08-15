@@ -1,5 +1,5 @@
 import { promisifyReadFile, stringTrim, isNumeric, Path } from '../utilities';
-import { IDscData, IDscDataExtended, DscDefines, DscPcd, SourceInfo, DscError, DscSections, DscPcdType, DscComponent, DscLibClass, DscSectionDescription } from '../parsers/types';
+import { IDscData, IDscDataExtended, DscDefines, DscPcd, SourceInfo, DscError, DscSections, DscPcdType, DscComponent, DscLibClass, DscSectionDescription, DscSkuId } from '../parsers/types';
 import { logger } from "../logger";
 import * as path from 'path';
 import { Uri } from 'vscode';
@@ -124,17 +124,21 @@ export class DscParser {
     return [];
   }
 
+  private static ParseSkuIdLine(line: string, source: SourceInfo): DscSkuId|DscError {
+    return this.MakeError("Don't know how to parse this", line, line, source, false);
+  }
+
   private static ParseLibraryClassLine(line: string, source: SourceInfo, section: IParseSection): DscLibClass|DscError {
     if (line.indexOf("|") == -1) {
       return this.MakeError("A library class statement must have a =", line, line, source, true);
     }
     let parts = line.split("|");
     if (parts.length > 2) {
-      this.MakeError("Too many pipes signs", parts[2], line, source, false);
+      return this.MakeError("Too many pipes signs", parts[2], line, source, false);
     }
     let key = parts[0].trim();
     if (key.indexOf(" ") != -1) {
-      this.MakeError("The library class can't have spaces", key, line, source, false);
+      return this.MakeError("The library class can't have spaces", key, line, source, false);
     }
     
     let infPath = parts[1].trim();
@@ -144,23 +148,29 @@ export class DscParser {
     return result;
   }
 
-  private static ParseDefineLine(line: string, source: SourceInfo): DscDefines|DscError {
+  private static ParseComponentLine(line: string, source: SourceInfo, section: IParseSection): DscComponent|DscError {
+    //TODO: 
+    if (line.startsWith("{")) {
+      return this.MakeError("The bracket should be on the same line as ", "{", line, source, false);
+    }
+  }
 
+  private static ParseDefineLine(line: string, source: SourceInfo): DscDefines|DscError {
     if (line.indexOf("=") == -1) {
       return this.MakeError("A define statement must have a =", line, line, source, true);
     }
     let parts = line.split("=");
     if (parts.length > 2) {
-      this.MakeError("Too many equal signs", parts[2], line, source, false);
+      return this.MakeError("Too many equal signs", parts[2], line, source, false);
     }
     let key = parts[0].trim();
     if (key.indexOf(" ") != -1) {
-      this.MakeError("The define key can't have spaces", key, line, source, false);
+      return this.MakeError("The define key can't have spaces", key, line, source, false);
     }
     //TODO check for more invalid characters in value/key
     let value = parts[1].trim();
     if (value.indexOf(" ") != -1 && (!value.startsWith('"') || !value.endsWith('"'))) {
-      this.MakeError("You need to wrap values with spaces in quotes", value, line, source, false);
+      return this.MakeError("You need to wrap values with spaces in quotes", value, line, source, false);
     }
     value = value.replace('"', ""); // strip the " off
     return {
@@ -188,6 +198,7 @@ export class DscParser {
       libraries: [],
       pcds: [],
       findPcd: DscParser.FindPcd,
+      skus: [],
       toDscData: DscParser.ToDscData, //returns the DSC data in a simpler format
       errors: [],
       symbols: [],
@@ -291,7 +302,7 @@ export class DscParser {
             currentSection.type = null;
             continue;
           }
-          //clear out our current section tyoe
+          //clear out our current section type
           currentSection.type = sectionTypeEnum;
           currentSection.kind = sectionTypeDescriptors;
           currentSection.variables = [];
@@ -303,7 +314,29 @@ export class DscParser {
           data.errors.push(this.MakeError("This line doesn't coorespond to a good section", currentLine.line, currentLine.line, currentParsing.source, true));
           logger.warn("Unknown section: "+currentLine.line);
         }
-        else if (currentSection.type == DscSections.Defines) {
+        else if (currentSection.type == DscSections.BuildOptions){ // BUILD OPTIONS
+
+        }
+        else if (currentSection.type == DscSections.SkuIds) { //SKU ID's
+          let results = this.ParseLibrarySkuIdLine(currentLine.line, currentParsing.source);
+          if (results instanceof DscError) {
+            data.errors.push(results);
+            continue;
+          }
+          //TODO check if we already have this sku ID
+          //TODO make sure sku parent is valid
+          data.skus.push(results);
+        }
+        else if (currentSection.type == DscSections.Components){ // COMPONENTS
+          let results = this.ParseComponentLine(currentLine.line, currentParsing.source, currentSection);
+          if (results instanceof DscError) {
+            data.errors.push(results);
+            continue;
+          }
+          //TODO figure out how to handle multiline components 
+          //data.components.push(results);
+        }
+        else if (currentSection.type == DscSections.Defines) { // DEFINES
           let results = this.ParseDefineLine(currentLine.line, currentParsing.source);
 
           if (results instanceof DscError) {
@@ -338,6 +371,8 @@ export class DscParser {
     //TODO check if PlatformGuid is valid and good
     //TODO check PLATFORM_VERSION
     //TODO check PLATFORM_NAME
+
+    //Check if paths included are valid
     return data;
   }
 

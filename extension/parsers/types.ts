@@ -44,12 +44,17 @@ export interface IDscDataExtended {
   filePath: Uri;
   defines: DscDefines[],
   findDefine: (string) => DscDefines[]; //search for a define by name
+  //Libraries
   libraries: DscLibClass[],
+  //PCD's
   pcds: DscPcd[],
   findPcd: (string) => DscPcd[];
+  //Sku
+  skus: DscSkuId[],
+  //Helprers
   toDscData: () => IDscData; //returns the DSC data in a simpler format
   symbols: DscSymbol[];
-  errors: DscError[]
+  errors: DscError[];
 }
 
 export class SourceInfo {
@@ -151,6 +156,15 @@ export class DscPcd {
     return this.type.toString() + "-" + this.tokenspace + "." + this.tokenname + "|" + this.value;
   }; // a function that returns a string
 }
+
+export class DscSkuId {
+  constructor (
+    public id: number,
+    public name: string,
+    public parent: number|string = 0
+  ) {};
+}
+
 //the conditional
 export class DscConditional {
   conditions: string[]; //a list of all the conditionals that took us to this point
