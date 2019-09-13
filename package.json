@@ -3,7 +3,7 @@
     "displayName": "MuSupport",
     "description": "Language support for files in Project Mu",
     "repository": "https://github.com/matthewfcarlson/musupport/",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "license": "CC-BY-NC-SA-4.0",
     "engines": {
         "vscode": "^1.29.0"
@@ -299,14 +299,14 @@
     },
     "scripts": {
         "update-vscode": "node ./node_modules/vscode/bin/install",
-        "postinstall-ext": "node ./node_modules/vscode/bin/install",
         "vscode:prepublish": "webpack --mode production",
         "build": "npm run compile",
         "compile": "webpack --mode none",
         "watch": "webpack --mode none --watch",
         "package": "vsce package",
-        "install-ext": "code --install-extension release/musupport-0.0.5.vsix",
+        "install-ext": "code --install-extension release/musupport-0.0.6.vsix",
         "pretest": "npm run compile",
+        "postinstall": "node ./node_modules/vscode/bin/install",
         "test": "node ./out/tests/runTests.js"
     },
     "devDependencies": {
