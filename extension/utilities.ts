@@ -133,6 +133,11 @@ export function promisifyGlob(pattern: vscode.GlobPattern, options?: glob.IOptio
   });
 }
 
+export function isNumeric(value: string | number): boolean
+{
+   return ((value != null) && !isNaN(Number(value.toString())));
+}
+
 
 export function promisifyWriteFile(filename: string, contents: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {

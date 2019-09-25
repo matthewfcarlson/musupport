@@ -31,10 +31,12 @@ export class MainClass implements vscode.Disposable {
     packageTree: PackageTreeProvider;
     projectTree: ProjectTreeNodeProvider;
     libclsTree:  LibraryClassProvider;
+    ws:          vscode.WorkspaceFolder
 
 
     constructor(context: vscode.ExtensionContext) {
         const workspace = vscode.workspace.workspaceFolders[0]; // TODO: Merge changes to support multiple workspaces
+        this.ws = workspace; //TODO this needs to support multiple workspaces
         this.context      = context;
         this.terminal     = new UefiTerminal();
         this.repoScanner  = new RepoScanner(workspace);
@@ -60,7 +62,7 @@ export class MainClass implements vscode.Disposable {
         try {
             this.commands.register(this.context);
             this.tasks.register();
-            DSC_LSP.activate(this.context);
+            DSC_LSP.activate(this.context, this.ws);
             this.packageTree.register(this.context);
             this.libclsTree.register(this.context);
             this.projectTree.register();

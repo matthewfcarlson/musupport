@@ -1,5 +1,5 @@
+import { promisifyReadFile, stringTrim, isNumeric, Path } from '../utilities';
 import { IDscData, IDscDataExtended, IDscDefines, IDscPcd, ISourceInfo, IDscError, DscSections, DscPcdType, IComponent } from '../parsers/types';
-import { promisifyReadFile, stringTrimLeft, stringTrimRight, stringTrim, Path } from '../utilities';
 import { logger } from "../logger";
 import * as path from 'path';
 import { Uri } from 'vscode';
@@ -9,10 +9,6 @@ import * as vscode from 'vscode';
 import { InfPaser } from '../parsers/inf_parser';
 
 // Parses a DSC file, including !include
-
-class DscData {
-
-}
 
 interface DscLine {
   line: string,
@@ -47,9 +43,11 @@ export class DscParser {
   public static GetPossibleSections(): string[] {
     var validSections: string[] = [];
     for(var n in DscSections) {
+      if (isNumeric(n)) continue;
       validSections.push(n);
     }
     for(var n in DscPcdType) {
+      if (isNumeric(n)) continue;
       validSections.push("Pcd"+n);
     }
     return validSections;
@@ -64,11 +62,10 @@ export class DscParser {
     try {
       let fileContents = await promisifyReadFile(filePath);
       let fileArray = fileContents.split("\n");
-      logger.info("filearray", fileArray);
       // map the raw text to DSC lines
       let lineArray = fileArray.map((line, i) => {
         let line_length = line.length;
-        line = stringTrimLeft(line);
+        line = line.trimLeft();
         let column = line_length - line.length; //keep track of how much we snipped
         
         //remove comments
@@ -80,23 +77,24 @@ export class DscParser {
           line = line.substring(0, pound_index);
         }
         //make sure to clean up after the comment
-        line = stringTrimRight(line);
+        let final_line = line.replace('\n',"").replace('\r',"").trimRight(); //remove new line characters, we will be adding our own
+        
         //put the data in that we care about
         var line_data: DscLine = {
-          line: line,
+          line: final_line,
           lineNo: i + 1, // one more than our current position in the array
           columnOffset: column
         };
         return line_data;
       });
-      logger.info("linearray", fileArray);
+      //logger.info("linearray", lineArray);
 
       //remove lines that are whitespace
       lineArray = lineArray.filter( (line) => {
         if (line.line.length == 0) return false;
         return true;
       });
-      logger.info("linearray", fileArray);
+      //logger.info("linearray filtered", lineArray);
 
       return lineArray;
 
@@ -144,8 +142,10 @@ export class DscParser {
     });
 
     var validSections = DscParser.GetPossibleSections();
-    var currentSection:IParseSection;
-    currentSection.type = null;
+    var currentSection:IParseSection = {
+      type: null,
+      kind: null
+    };
     logger.info("Valid Sections:"+validSections);
 
     //first we need to open the file
@@ -155,7 +155,7 @@ export class DscParser {
         currentParsing.lines = await DscParser.GetCleanLinesFromUri(currentParsing.source.uri);
         if (currentParsing.lines == null) { // if we can't open the file, create an error of the particular
           parseStack.shift();
-          currentParsing = parseStack[0];
+          logger.info("We weren't able to open the file");
           data.errors.push(this.MakeError("Unable to open file", "", currentParsing.source, true));
           continue;
         }
@@ -209,7 +209,7 @@ export class DscParser {
             sectionTypeDescriptors.push(type);
           });
           
-          var sectionTypeEnum = sectionType.startsWith("Pcd")?DscPcdType[sectionType.substr(3)]:DscSections[sectionType];
+          var sectionTypeEnum:DscPcdType|DscSections = sectionType.startsWith("Pcd")?DscPcdType[sectionType.substr(3)]:DscSections[sectionType];
           
           currentSection = {
             type: sectionTypeEnum,
@@ -218,11 +218,16 @@ export class DscParser {
         }
         else if (currentSection.type == null){
           data.errors.push(this.MakeError("This line doesn't coorespond to a good section", currentLine.line, currentParsing.source, true));
+          logger.warn("Unknown section"+currentLine.line);
         }
         else if (currentSection.type == DscSections.LibraryClasses) {
           //parse the library classes?
+          logger.info("Parsing section "+currentSection.type);
         }
-      }
+        
+      } // end of lines == 0
+      //lines should be zero
+      parseStack.shift(); // shift off the parse stack
     }
     return data;
   }
