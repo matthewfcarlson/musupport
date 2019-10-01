@@ -39,6 +39,9 @@ export class UefiCommands implements vscode.Disposable {
             vscode.commands.registerCommand('musupport.scan', () => {
                 return this.scanRepository();
             }),
+            vscode.commands.registerCommand('musupport.setup', () => {
+                return this.setupRepository();
+            }),
             vscode.commands.registerCommand('musupport.update', () => {
                 return this.updateRepository();
             }),
@@ -105,6 +108,21 @@ export class UefiCommands implements vscode.Disposable {
     //     });
     // }
 
+    async setupRepository() {
+        if (!this.projManager) {
+            utils.showError("UEFI extension hasn't finished loading!");
+            return;
+        }
+
+        let proj = this.projManager.getCurrentProject();
+        if (!proj) {
+            utils.showError("No project selected!");
+            return;
+        }
+
+        await this.term.runPythonCommand([proj.platformBuildScriptPath, "--setup"])
+    }
+
     async updateRepository() {
         if (!this.projManager) {
             utils.showError("UEFI extension hasn't finished loading!");
@@ -143,11 +161,11 @@ export class UefiCommands implements vscode.Disposable {
     async installMuEnvironment() {
         // TODO: If pip_requirements.txt isn't present, install the latest mu_build modules...
         try {
-            await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "-r", "pip_requirements.txt"]);
+            await this.term.runPythonCommand(["-m", "pip", "install", "--user", "--upgrade", "-r", "pip_requirements.txt"]);
         }
         catch {
             logger.info("Failed to install requirements");
-            await this.term.runPythonCommand(["-m", "pip", "install", "--upgrade", "mu-build"]);
+            await this.term.runPythonCommand(["-m", "pip", "install", "--user", "--upgrade", "mu-build"]);
             //installing mu_build will install all the needed dependencies 
             //TODO catch errors if we fail in the second install
         }

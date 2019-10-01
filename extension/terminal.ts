@@ -41,7 +41,7 @@ export class UefiTerminal implements vscode.Disposable {
         };
         this.uefiTerminal = vscode.window.createTerminal(options);
         this.uefiTerminal.show();
-        this.uefiTerminal.sendText(exec + ' ' + args.join(' '));
+        this.uefiTerminal.sendText('& "' + exec + '" ' + args.join(' ')); // TODO: Proper shell escaping...
 
         // TODO: Wait for completion
     }

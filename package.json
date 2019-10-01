@@ -62,10 +62,6 @@
         },
         "commands": [
             {
-                "command": "extension.helloWorld",
-                "title": "Hello World"
-            },
-            {
                 "command": "musupport.selectPackage",
                 "title": "Select DSC Package",
                 "category": "Mu Support"
@@ -73,6 +69,11 @@
             {
                 "command": "musupport.refreshPackages",
                 "title": "Refresh DSC Packages",
+                "category": "Mu Support"
+            },
+            {
+                "command": "musupport.setup",
+                "title": "Setup Repository",
                 "category": "Mu Support"
             },
             {
