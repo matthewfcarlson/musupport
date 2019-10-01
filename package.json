@@ -31,7 +31,7 @@
         "onLanguage:dec",
         "onCommand:musupport.*"
     ],
-    "main": "./dist/main.js",
+    "main": "./dist/extension.js",
     "contributes": {
         "viewsContainers": {
             "activitybar": [
