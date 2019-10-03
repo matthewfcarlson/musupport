@@ -9,25 +9,59 @@ let diagnosticCollection: vscode.DiagnosticCollection;
 let workspace: vscode.WorkspaceFolder;
 
 function DscOnCreate(event: vscode.Uri): any {
-  logger.info("File was created");
+  logger.info("File was created "+event.toString());
   logger.info(event.toString())
   //TODO: remove all the entries from the diagnostic collection
   let parsing = DscParser.ParseFull(event, workspace.uri);
   //TODO: add errors from parsing to Diagnostics
 }
 
+
+
 async function DscOnEdit(event: vscode.Uri): Promise<any> {
-  logger.info("File was edited");
+  logger.info("File was edited "+event.toString());
   //TODO: remove all the entries from the diagnostic collection
   logger.info(event.toString())
   let parsing = await DscParser.ParseFull(event, workspace.uri);
-  logger.info("Parsing:", parsing);
-  logger.info("Errors:", parsing.errors);
-  //TODO: add errors from parsing to Diagnostics
+  //logger.info("Parsing:", parsing);
+  //logger.info("Errors:", parsing.errors);
+  logger.info("Found "+parsing.errors.length +" errors");
+  //TODO clear existing errors for this uri
+  diagnosticCollection.delete(event);
+  let newErrors:Map<vscode.Uri, vscode.Diagnostic[]> = new Map();
+  for (const error of parsing.errors) {
+    let severity: vscode.DiagnosticSeverity = (error.isFatal)?vscode.DiagnosticSeverity.Error:vscode.DiagnosticSeverity.Warning;
+    let lineNo = error.source.lineno - 1;
+    let col = error.source.column - 1;
+    let col_end = col + error.code_text.length;
+    if (lineNo < 0) lineNo = 0;
+    if (col < 0) col = 0;
+    if (col_end < 0) col_end = 0;
+    let start: vscode.Position = new vscode.Position(lineNo, col);
+    let end = start.translate(0,error.code_text.length)
+    let range: vscode.Range = new vscode.Range(start,end)
+    let uri = error.source.uri;
+
+    let newError:vscode.Diagnostic = {
+      severity: severity,
+      message: error.error_msg,
+      range: range,
+      code: error.code_text,
+    };
+    if (!newErrors.has(uri)) newErrors.set(uri, []);
+    //TODO use error.source.uri to add to the list of sources
+    newErrors.get(uri).push(newError);
+    logger.warn(error.toString());
+  }
+  for (const error_item of newErrors){
+    let error_uri = error_item[0];
+    let error_list = error_item[1];
+    diagnosticCollection.set(error_uri, error_list);
+  }
 }
 
 function DscOnDelete(event: vscode.Uri): any {
-  logger.info("File was deleted");
+  logger.info("File was deleted "+event.toString());
   logger.info(event.toString())
   //TODO: remove all the entries from the diagnostic collection
 }

@@ -1,7 +1,7 @@
 import { promisifyReadFile, stringTrim, Path } from "../utilities";
 import { logger } from "../logger";
 import * as path from 'path';
-import { InfData, IDscLibClass, IDscGuid } from "./types";
+import { InfData, DscLibClass, DscGuid } from "./types";
 
 export class InfPaser {
     public static async ParseInf(infpath: Path): Promise<InfData> {
@@ -65,17 +65,17 @@ export class InfPaser {
         return Promise.resolve(data);
     }
 
-    private static parseLibraryClasses(lines: string[], infPath: Path): IDscLibClass[] {
-        let items: IDscLibClass[] = [];
+    private static parseLibraryClasses(lines: string[], infPath: Path): DscLibClass[] {
+        let items: DscLibClass[] = [];
         for (let ln of lines) {
             let [classname, path] = ln.split('|');
             if (classname) { classname = classname.trim(); }
             if (path) { path = path.trim(); }
             if (classname && path) {
-                let item: IDscLibClass = {
-                    class: classname,
+                let item: DscLibClass = {
+                    className: classname,
                     name: null,
-                    archs: null,
+                    descriptors: null,
                     infPath: new Path(path), // relative path
                     source: null
                 };
@@ -103,14 +103,14 @@ export class InfPaser {
         return map;
     }
 
-    private static parseGuids(lines: string[]) : IDscGuid[] {
-        let items: IDscGuid[] = [];
+    private static parseGuids(lines: string[]) : DscGuid[] {
+        let items: DscGuid[] = [];
         for (let ln of lines) {
             let [name, guid] = ln.split('=', 2);
             if (name) { name = name.trim(); }
             if (guid) { guid = guid.trim(); }
             if (name && guid) {
-                let item: IDscGuid = {
+                let item: DscGuid = {
                     name: name,
                     guid: guid
                 };

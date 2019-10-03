@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { IDscData, IDscDataExtended, IComponent, IDscLibClass, InfData, DecData, DscPcdType, IDscGuid } from "./types";
+import { IDscData, IDscDataExtended, DscComponent, DscLibClass, InfData, DecData, DscPcdType, DscGuid } from "./types";
 import * as utils from '../utilities';
 import { Path } from '../utilities';
 import { InfPaser } from './inf_parser';
@@ -35,10 +35,10 @@ export class Package {
         }
         return null;
     }
-    get exportedGuids(): IDscGuid[] {
+    get exportedGuids(): DscGuid[] {
         return (this.dec) ? this.dec.guids : null;
     }
-    get exportedProtocols(): IDscGuid[] {
+    get exportedProtocols(): DscGuid[] {
         return (this.dec) ? this.dec.protocols : null;
     }
     get exportedPcds(): string[] {
@@ -92,7 +92,7 @@ export class Package {
                         this.referencedLibraries.push(lib);
                     }
                     else {
-                        logger.warn(`Could not find library ${info.class}|${info.infPath} referenced by DSC ${this.dsc.filePath.basename}`);
+                        logger.warn(`Could not find library ${info.className}|${info.infPath} referenced by DSC ${this.dsc.filePath.basename}`);
                     }
                 }
             }
@@ -176,10 +176,10 @@ export class Package {
  */
 export class Component {
     name: string;
-    data: IComponent;
+    data: DscComponent;
     filePath: Path;
 
-    constructor(data: IComponent, pkg: Package = null, name: string = null) {
+    constructor(data: DscComponent, pkg: Package = null, name: string = null) {
         this.data = data;
         this.name = name;
 
@@ -199,11 +199,11 @@ export class Component {
 export class Library {
     name: string;
     class: string;
-    data: IComponent;
+    data: DscComponent;
     package: Package;  // The package that the library belongs to
     filePath: Path;
 
-    get archs() { return this.data.archs; }
+    get archs() { return this.data.descriptors; }
 
     static async parseInf(infFile: Path) : Promise<Library> {
         try {
@@ -217,11 +217,11 @@ export class Library {
     static fromInfData(info: InfData, pkg: Package = null) : Library {
         if (info && info.defines) {
             let infPath = new Path(info.infPath);
-            let comp: IDscLibClass = {
+            let comp: DscLibClass = {
                 name: infPath.basename,
-                class: null,
+                className: null,
                 infPath: infPath,
-                archs: [], // TODO: Populate from INF
+                descriptors: [], // TODO: Populate from INF
                 source: null
             };
 
@@ -235,10 +235,10 @@ export class Library {
             if (lclass.indexOf('|') > 0) {
                 let [def_classname, def_classtypes] = lclass.split('|');
                 if (def_classname) {
-                    comp.class = def_classname.trim();
+                    comp.className = def_classname.trim();
                 }
             } else {
-                comp.class = lclass.trim();
+                comp.className = lclass.trim();
             }
 
             // Get the INF basename
@@ -264,14 +264,14 @@ export class Library {
         return `${this.class||"NULL"}|${this.filePath}`;
     }
 
-    constructor(data: IDscLibClass, pkg: Package = null) {
+    constructor(data: DscLibClass, pkg: Package = null) {
         this.data = data;
         this.package = pkg;
 
         if (data) {
             this.filePath = data.infPath;
             this.name = (data.name) ? data.name.toString() : null;
-            this.class = (data.class) ? data.class.toString() : null;
+            this.class = (data.className) ? data.className.toString() : null;
         }
 
         if (!this.name && this.filePath) {

@@ -5,7 +5,7 @@ import { RepoScanner, PCD } from '../reposcanner';
 import { logger } from '../logger';
 import { Package, Library, Component } from '../parsers/models';
 import { Path } from '../utilities';
-import { IDscGuid } from '../parsers/types';
+import { DscGuid } from '../parsers/types';
 
 export class Node extends vscode.TreeItem {
     constructor(
@@ -262,7 +262,7 @@ export class ComponentNode extends Node {
 
 export class GuidNode extends Node {
     constructor(
-        public readonly guid: IDscGuid,
+        public readonly guid: DscGuid,
         protected readonly selectCommand: string = null
     ) {
         super(guid.name, false, selectCommand);
