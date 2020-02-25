@@ -32,7 +32,7 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 ## Release Notes
 
-I changed it so you no longer get automatic pip installs.
+I changed it so you no longer get automatic pip installs. It was annoying.
 
 ### 1.0.0
 
