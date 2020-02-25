@@ -35,6 +35,7 @@ Calling out known issues can help limit users opening duplicate issues against y
 I changed it so you no longer get automatic pip installs. It was annoying to users since we moved to edk2 tools.
 Are you even there?
 Am I?
+I think.
 
 ### 1.0.0
 
