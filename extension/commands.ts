@@ -70,13 +70,13 @@ export class UefiCommands implements vscode.Disposable {
         //utils.showMessage(`Scan complete! Found ${this.projManager.projectCount} projects`);
 
         // TODO: This could run in parallel to the main scan
-        if (!await this.isMuEnvironmentInstalled()) {
+        /*if (!await this.isMuEnvironmentInstalled()) {
             logger.info('Project Mu Environment not yet installed');
             await this.installMuEnvironment();
             if (!await this.isMuEnvironmentInstalled()) {
                 logger.error('Could not install the Mu Environment!\nCheck your pip/python');
             }
-        }
+        }*/
     }
 
     async scanRepositoryForProjects() {
@@ -166,9 +166,9 @@ export class UefiCommands implements vscode.Disposable {
         catch {
             logger.info("Failed to install requirements");
             await this.term.runPythonCommand(["-m", "pip", "install", "--user", "--upgrade", "mu-build"]);
-            //installing mu_build will install all the needed dependencies 
+            //installing mu_build will install all the needed dependencies
             //TODO catch errors if we fail in the second install
         }
-        
+
     }
 }
