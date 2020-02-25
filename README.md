@@ -32,7 +32,7 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+I changed it so you no longer get automatic pip installs. It was annoying to users since we moved to edk2 tools.
 
 ### 1.0.0
 
