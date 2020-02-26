@@ -33,6 +33,8 @@ export class UefiCommands implements vscode.Disposable {
     dispose() {
     }
 
+    Lets add a change here.
+
     async register(context: vscode.ExtensionContext) {
         // TODO: If commands are already registered, don't re-register
         context.subscriptions.push(...[
@@ -146,7 +148,7 @@ export class UefiCommands implements vscode.Disposable {
         // TODO: Catch errors
     }
 
-    async isMuEnvironmentInstalled() : Promise<boolean> {
+    async isMuEnvironmentInstalled(): Promise<boolean> {
         // Try to import the Mu pip package to see if it is installed
         try {
             await execPython('from MuEnvironment import CommonBuildEntry');
@@ -166,9 +168,9 @@ export class UefiCommands implements vscode.Disposable {
         catch {
             logger.info("Failed to install requirements");
             await this.term.runPythonCommand(["-m", "pip", "install", "--user", "--upgrade", "mu-build"]);
-            //installing mu_build will install all the needed dependencies 
+            //installing mu_build will install all the needed dependencies
             //TODO catch errors if we fail in the second install
         }
-        
+
     }
 }
