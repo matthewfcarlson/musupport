@@ -30,7 +30,7 @@ export class UefiCommands implements vscode.Disposable {
         this.term = term;
     }
 
-    dispose() {
+    dispose() { wow..can i really submit code changes here 
     }
 
     Lets add a change here.
