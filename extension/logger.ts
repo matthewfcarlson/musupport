@@ -1,6 +1,8 @@
 'use strict';
 
-import { TransformableInfo } from 'logform';
+Adding a second commit.
+
+  import { TransformableInfo } from 'logform';
 import * as path from 'path';
 import { MESSAGE } from 'triple-beam';
 import * as vscode from 'vscode';
