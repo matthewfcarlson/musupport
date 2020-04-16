@@ -332,7 +332,7 @@
     "dependencies": {
         "glob": "^7.1.4",
         "http-proxy-agent": ">=2.1.0",
-        "https-proxy-agent": "^2.2.2",
+        "https-proxy-agent": "^2.2.3",
         "jsonc-parser": "^2.1.0",
         "logform": "^1.10.0",
         "mkdirp": "^0.5.1",
